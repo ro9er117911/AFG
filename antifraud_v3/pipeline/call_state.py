@@ -70,9 +70,18 @@ class CallState:
         return self.case_memory
 
     def record_chunk(
-        self, transcript_text: str, speaker: str | None, result: SynthesizeResult
+        self,
+        transcript_text: str,
+        speaker: str | None,
+        result: SynthesizeResult,
+        timestamp: float | None = None,
     ) -> Alert | None:
-        ts = self.elapsed_seconds()
+        """timestamp overrides the default wall-clock elapsed_seconds() reading. Needed for
+        batch/upload analysis (server/upload.py): there, "when this happened" should mean
+        position within the uploaded audio, not how long the ASR/LLM pipeline took to process
+        it (which is what elapsed_seconds() would otherwise measure, since CallState's clock
+        starts at construction, not at audio-position zero)."""
+        ts = timestamp if timestamp is not None else self.elapsed_seconds()
         self.transcript.append(TranscriptEntry(timestamp=ts, speaker=speaker, text=transcript_text))
         self.risk_trajectory.append(
             RiskPoint(

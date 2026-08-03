@@ -257,6 +257,7 @@
 
   <div class="tabs">
     <button class="tab active" data-screen="live">即時通話</button>
+    <button class="tab" data-screen="upload">上傳錄音分析</button>
     <button class="tab" data-screen="history">歷史紀錄</button>
     <button class="tab" data-screen="settings">設定</button>
   </div>
@@ -332,6 +333,62 @@
       <div class="panel-head"><div class="panel-title">通話逐字稿</div></div>
       <div class="transcript-list" id="transcriptList">
         <div class="t-placeholder" id="transcriptPlaceholder">按「開始監聽」後，逐字稿會即時顯示在這裡。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ UPLOAD ============ -->
+  <div class="screen" id="screen-upload">
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">上傳錄音分析</div></div>
+      <div class="field-help" style="margin-bottom:14px;">
+        上傳事後錄好的通話錄音（wav/flac/ogg，16kHz 單聲道效果最好），會用跟即時監聽一樣的
+        VAD 切句、語音辨識、聲學／情緒特徵、LLM 推理流程分析整段錄音，結果也會存進歷史紀錄。
+        錄音可能需要數十秒到數分鐘才能分析完畢，視錄音長度而定。
+      </div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <input type="file" id="uploadFileInput" accept="audio/*" />
+        <button class="btn-toggle-listen" id="btnUploadAnalyze">開始分析</button>
+      </div>
+      <div class="placeholder-note" id="uploadError" style="display:none; margin-top:12px; border-color:var(--risk-high); color:var(--risk-high); border-style:solid;"></div>
+    </div>
+
+    <div id="uploadResult" style="display:none;">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">風險趨勢</div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="risk-readout">
+              <span class="num mono" id="uploadRiskNum">0</span><span class="unit">/ 100</span>
+            </div>
+            <span class="risk-pill low" id="uploadRiskPill">低風險</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <svg viewBox="0 0 400 92" preserveAspectRatio="none">
+            <!-- reuses #areaGradCalm/#areaGradAlert defined in the live screen's svg above —
+                 SVG gradient refs resolve by id anywhere in the document, no need to redefine -->
+            <g class="chart-grid">
+              <line x1="0" y1="23" x2="400" y2="23"/>
+              <line x1="0" y1="46" x2="400" y2="46"/>
+              <line x1="0" y1="69" x2="400" y2="69"/>
+            </g>
+            <path id="uploadChartArea" class="chart-area" d="M0,92 L400,92 Z"/>
+            <path id="uploadChartLine" class="chart-line" d="M0,92 L400,92"/>
+            <circle id="uploadChartEndpoint" class="chart-endpoint" cx="0" cy="92" r="4"/>
+          </svg>
+        </div>
+        <div class="field-help mono" id="uploadSummary" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">示警</div></div>
+        <div id="uploadAlertsList"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">逐字稿</div></div>
+        <div class="transcript-list" id="uploadTranscriptList"></div>
       </div>
     </div>
   </div>

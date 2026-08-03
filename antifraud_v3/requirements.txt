@@ -12,6 +12,7 @@ silero-vad>=5.1
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 websockets>=13.0
+python-multipart>=0.0.9  # required by FastAPI's UploadFile (server/upload.py)
 
 # LLM provider (Claude is the current default implementation — see README.md § LLM provider)
 anthropic>=0.68.0
