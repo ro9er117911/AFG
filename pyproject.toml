@@ -1,0 +1,5 @@
+[tool.pytest.ini_options]
+testpaths = ["antifraud_v3/tests"]
+markers = [
+    "live_api: hits the real Claude API (needs ANTHROPIC_API_KEY or a valid `ant auth login` session). Run the full suite including these with plain `pytest`; skip them (e.g. no credential available, or in CI) with `pytest -m \"not live_api\"`.",
+]

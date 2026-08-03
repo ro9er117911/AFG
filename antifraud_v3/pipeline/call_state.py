@@ -115,7 +115,16 @@ class CallState:
             self._elevated_streak = 0
 
         if self._elevated_streak >= self.debounce_chunks:
-            if self.alert_state in ("none", "resolved"):
+            # Bug found by tests/test_call_state.py: this used to check
+            # `alert_state in ("none", "resolved")`, which is nearly always false right here
+            # for any debounce_chunks >= 2 — the elif branch below already moved alert_state
+            # to "watching" on an earlier chunk in the same streak (the streak has to pass
+            # through >0-but-below-threshold before it can reach the threshold), so by the
+            # time the threshold is actually met, "watching" fails that guard and the alert
+            # silently never fires. "watching" only means "still accumulating toward a
+            # possible alert," not "an alert is currently showing" — only "alert_issued"
+            # should block firing here.
+            if self.alert_state != "alert_issued":
                 self.alert_state = "alert_issued"
                 return Alert(reason="sustained_risk", justification=result.justification)
         elif self._elevated_streak > 0 and self.alert_state == "none":
