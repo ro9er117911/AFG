@@ -8,7 +8,7 @@ def get_llm_provider() -> LLMProvider:
     seeds from LLM_MODEL/LLM_EFFORT env vars on first run — see .env.example). Cached; call
     reset_provider() after a settings change so the next call rebuilds with the new values.
     Adding a second provider means one new class + one branch here; reasoning/ never changes.
-    See REWRITE_PLAN.md §3.4.
+    See docs/DESIGN.md §3.4.
     """
     global _provider_instance
     if _provider_instance is not None:

@@ -1,4 +1,4 @@
-"""Regression logging per REWRITE_PLAN.md §6 — one JSONL line per test-clip run, so a
+"""Regression logging per docs/DESIGN.md §6 — one JSONL line per test-clip run, so a
 prompt/rubric change can be checked for false-positive/negative regressions without needing
 a large labeled dataset (there isn't one).
 """

@@ -1,4 +1,4 @@
-"""REST API for the History and Settings screens (REWRITE_PLAN.md §9) — separate from ws.py's
+"""REST API for the History and Settings screens (docs/DESIGN.md §9) — separate from ws.py's
 WebSocket endpoint since these are plain request/response, not the live-call stream.
 """
 

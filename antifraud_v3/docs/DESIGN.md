@@ -1,4 +1,10 @@
-# Implementation Plan: Real-Time Rewrite of `antifraud_v2` (single build, no phased milestones)
+# Design Rationale: Real-Time Rewrite of `antifraud_v2`
+
+> This was the build plan for `antifraud_v3` — it's kept here (not deleted) as the design
+> record, since most modules' docstrings cite specific sections of it (`docs/DESIGN.md §N`) to
+> explain *why* a decision was made, not just what the code does. Originally `docs/DESIGN.md`
+> at the repo root; the implementation described here is now complete — see `README.md` for
+> current status, setup, and how to run it.
 
 ## 0. TL;DR
 

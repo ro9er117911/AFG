@@ -1,4 +1,4 @@
-"""Call history persistence — SQLite, single file. See REWRITE_PLAN.md §9 (History screen)
+"""Call history persistence — SQLite, single file. See docs/DESIGN.md §9 (History screen)
 and §6 (the same per-call log doubles as eval material once real usage exists).
 """
 

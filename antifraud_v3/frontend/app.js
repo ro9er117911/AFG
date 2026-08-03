@@ -1,5 +1,5 @@
 // Real WebSocket + mic wiring for the live-call screen, plus REST calls for the History and
-// Settings screens (server/api.py) — see REWRITE_PLAN.md §9.
+// Settings screens (server/api.py) — see docs/DESIGN.md §9.
 
 const SERVER_SAMPLE_RATE = 16000;
 const MAX_CHART_POINTS = 40;

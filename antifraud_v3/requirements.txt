@@ -2,7 +2,7 @@
 torch>=2.0.0
 numpy>=1.24.0
 
-# Audio processing (parselmouth pitch tracker only — CREPE dropped, see REWRITE_PLAN.md §1)
+# Audio processing (parselmouth pitch tracker only — CREPE was dropped, see README.md § Architecture)
 librosa>=0.10.0
 praat-parselmouth>=0.4.3
 faster-whisper>=0.9.0
@@ -13,7 +13,7 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 websockets>=13.0
 
-# LLM provider (Claude is the current default implementation — see REWRITE_PLAN.md §3)
+# LLM provider (Claude is the current default implementation — see README.md § LLM provider)
 anthropic>=0.68.0
 pydantic>=2.7.0
 

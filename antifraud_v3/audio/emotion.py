@@ -1,6 +1,6 @@
 """Per-chunk TIMNet emotion inference. Ported from antifraud_v2/model_handling.py.
 
-Kept but demoted to soft/low-confidence evidence per REWRITE_PLAN.md §4 — TIMNet's training
+Kept but demoted to soft/low-confidence evidence per docs/DESIGN.md §4 — TIMNet's training
 corpora (CASIA/EMO-DB/EMOVO/IEMOCAP/RAVDESS/SAVEE, see ../references/01-timnet.md and
 02-cross-lingual-ser.md) are acted, non-telephone, and not Mandarin-conversational, so its
 output is fed to the reasoning engine as one signal among several, not a hard gate the way
@@ -66,7 +66,7 @@ def predict_emotion(
     y: np.ndarray, sr: int, window_size: float = 4.0, stride: float = 2.0, max_windows: int = 8
 ) -> tuple[str, dict[str, float]]:
     """Returns (predicted_label, {label: probability}). max_windows is lower than the old
-    whole-call default (30) — chunks are utterance-sized (<=15s per REWRITE_PLAN.md §2.1),
+    whole-call default (30) — chunks are utterance-sized (<=15s per docs/DESIGN.md §2.1),
     not whole calls, so far fewer windows are ever actually needed.
     """
     model = load_model()

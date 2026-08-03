@@ -1,7 +1,7 @@
 """Per-chunk acoustic feature extraction.
 
 Ported from antifraud_v2/audio_processing.py (git commit 0c66823, pre-deletion), operating on
-an in-memory (y, sr) array instead of a file path, and adapted per REWRITE_PLAN.md §1/§2.2:
+an in-memory (y, sr) array instead of a file path, and adapted per docs/DESIGN.md §1/§2.2:
 
 - Pitch tracking consolidated onto parselmouth's `to_pitch()` — CREPE (`model_capacity="full"`,
   Viterbi decoding) is dropped entirely. It was a second, heavier pitch tracker running

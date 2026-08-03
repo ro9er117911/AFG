@@ -1,5 +1,5 @@
 """FastAPI app entry point — serves the REST API, the WebSocket API, and the static frontend
-from one process (REWRITE_PLAN.md §9: "one local web app", no separate hosting).
+from one process (docs/DESIGN.md §9: "one local web app", no separate hosting).
 
 Run with: uvicorn antifraud_v3.server.main:app --reload
 """

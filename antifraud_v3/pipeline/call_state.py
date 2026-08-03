@@ -1,5 +1,5 @@
 """Per-call running state: transcript, within-call baseline, risk trajectory, and the alert
-debounce state machine. See REWRITE_PLAN.md §2.3/§2.4.
+debounce state machine. See docs/DESIGN.md §2.3/§2.4.
 """
 
 import time
@@ -86,7 +86,7 @@ class CallState:
         return self._evaluate_alert(result)
 
     def _evaluate_alert(self, result: SynthesizeResult) -> Alert | None:
-        """Two independent trigger paths — see REWRITE_PLAN.md §2.4. A fired alert doesn't
+        """Two independent trigger paths — see docs/DESIGN.md §2.4. A fired alert doesn't
         re-fire every subsequent chunk (alert_state gates it); acknowledge_alert() re-arms.
         """
         fired_trigger = next((t for t in result.hard_triggers if t.fired), None)

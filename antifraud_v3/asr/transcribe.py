@@ -1,7 +1,7 @@
 """Per-chunk ASR. Ported config from antifraud_v2/language_processing.py (same model size/
 device/compute_type) but transcribing an in-memory chunk array instead of a saved file, and
 called once per completed VAD chunk instead of once per whole call — "transcribe on turn
-completion," not literal word-level streaming ASR (see REWRITE_PLAN.md §5 for why word-level
+completion," not literal word-level streaming ASR (see docs/DESIGN.md §5 for why word-level
 streaming ASR is out of scope without a paid API).
 """
 

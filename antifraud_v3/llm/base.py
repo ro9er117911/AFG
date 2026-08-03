@@ -12,7 +12,7 @@ class LLMProviderError(Exception):
 
 class LLMProvider(ABC):
     """Single-method interface between the reasoning engine (reasoning/) and whichever
-    model actually answers it. See REWRITE_PLAN.md §3 for why this is deliberately this thin:
+    model actually answers it. See docs/DESIGN.md §3 for why this is deliberately this thin:
     the reasoning engine never imports a provider SDK directly, only this interface.
     """
 

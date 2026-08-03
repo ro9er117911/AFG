@@ -1,5 +1,5 @@
 """Runtime settings, persisted as a small JSON file rather than a DB table — it's a handful
-of scalar/list values, not relational data. Backs the Settings screen (REWRITE_PLAN.md §9).
+of scalar/list values, not relational data. Backs the Settings screen (docs/DESIGN.md §9).
 """
 
 import json

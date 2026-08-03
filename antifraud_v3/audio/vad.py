@@ -1,4 +1,4 @@
-"""VAD-triggered utterance chunking. See REWRITE_PLAN.md §2.1 for why chunks are
+"""VAD-triggered utterance chunking. See docs/DESIGN.md §2.1 for why chunks are
 utterance-sized (VAD-detected speech/silence transitions) rather than fixed time windows.
 
 Uses silero-vad's streaming VADIterator. NOTE: this is a first-pass implementation against
@@ -62,7 +62,7 @@ class VADChunker:
             if self._in_speech and sum(len(b) for b in self._speech_buf) >= self.max_chunk_samples:
                 # Hard cap hit mid-utterance (e.g. a scripted monologue) — force-close this
                 # chunk but stay "in speech" so the next frame starts a continuation chunk
-                # rather than waiting for real silence. See REWRITE_PLAN.md §2.1.
+                # rather than waiting for real silence. See docs/DESIGN.md §2.1.
                 completed.append(np.concatenate(self._speech_buf))
                 self._speech_buf = []
 

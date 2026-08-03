@@ -3,12 +3,12 @@
 The stage taxonomy is deliberately NOT the old 8-pattern earnings-call rubric from
 antifraud_v2/fraud_detection.py (which was, per its own docstring, "專為臺灣法人說明會環境設計" —
 built to catch an executive lying about financials, not a scammer manipulating a phone-call
-victim). See REWRITE_PLAN.md §1/§4. It's rewritten around scam-kill-chain stages, informed by
+victim). See docs/DESIGN.md §1/§4. It's rewritten around scam-kill-chain stages, informed by
 the PreScam benchmark (../references/09-prescam-benchmark.md).
 
 The underlying acoustic/prosodic research citations from the old threshold dict are kept as
 prompt grounding — they're real domain research, only the per-indicator arithmetic built on
-top of them (the normalization bug, see REWRITE_PLAN.md §1) is what's being discarded.
+top of them (the normalization bug, see docs/DESIGN.md §1) is what's being discarded.
 """
 
 SCAM_KILL_CHAIN_RUBRIC = """\
@@ -71,7 +71,7 @@ REFLECT_SYSTEM_PROMPT = """你是同一個詐騙偵測系統裡的「反思」�
 def build_synthesize_system_prompt(hard_triggers: list[str] | None = None) -> str:
     """hard_triggers is a parameter, not a module constant, so it can come from the live
     settings store (storage/settings_store.py, wired via the Settings screen) rather than
-    being frozen at import time — see REWRITE_PLAN.md §9's settings chip list.
+    being frozen at import time — see docs/DESIGN.md §9's settings chip list.
     """
     triggers = hard_triggers if hard_triggers is not None else DEFAULT_HARD_TRIGGERS
     trigger_lines = "\n".join(f"- {t}" for t in triggers)

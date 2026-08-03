@@ -7,7 +7,7 @@ _VALID_EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 
 
 class ClaudeProvider(LLMProvider):
-    """Current default LLMProvider implementation. See REWRITE_PLAN.md §3.3 for the reasoning
+    """Current default LLMProvider implementation. See docs/DESIGN.md §3.3 for the reasoning
     behind each parameter choice (model default, adaptive thinking, structured outputs).
 
     Auth resolves automatically via the anthropic SDK: ANTHROPIC_API_KEY env var, or an

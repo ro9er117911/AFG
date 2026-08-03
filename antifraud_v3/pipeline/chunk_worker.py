@@ -1,5 +1,5 @@
 """Orchestrates the per-chunk pipeline: ASR + acoustic features + emotion -> reasoning engine
--> call state update. See REWRITE_PLAN.md §2.2.
+-> call state update. See docs/DESIGN.md §2.2.
 """
 
 from dataclasses import dataclass

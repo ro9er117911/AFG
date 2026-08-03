@@ -1,4 +1,4 @@
-"""Run the pipeline against hand-curated test clips and log results. See REWRITE_PLAN.md §6.
+"""Run the pipeline against hand-curated test clips and log results. See docs/DESIGN.md §6.
 
 eval/test_clips/{scam,benign}/*.wav — NOT populated yet. scam/ should hold scripted scam-call
 recordings (tech-support, bank/government impersonation, urgency+payment requests — see

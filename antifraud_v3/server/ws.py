@@ -1,7 +1,7 @@
 """WebSocket endpoint: one persistent connection per live call. Accepts binary float32 PCM
 frames (16kHz mono) from the browser, chunks them via VAD, runs the per-chunk pipeline off
 the event loop thread, and pushes chunk/alert updates back as JSON — this is the part
-Streamlit's rerun model can't do natively, see REWRITE_PLAN.md §5.
+Streamlit's rerun model can't do natively, see docs/DESIGN.md §5.
 """
 
 import asyncio
