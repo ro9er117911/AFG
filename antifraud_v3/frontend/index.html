@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AFG 守話 — 即時通話防詐</title>
+<style>
+  :root {
+    --paper: #F3F5F4;
+    --ink: #14201F;
+    --ink-soft: rgba(20, 32, 31, 0.62);
+    --ink-faint: rgba(20, 32, 31, 0.38);
+    --surface: #FFFFFF;
+    --surface-2: #E8ECEA;
+    --border: #D7DEDB;
+    --accent: #2F8F86;
+    --accent-soft: rgba(47, 143, 134, 0.12);
+    --risk-low: #3F8F5B;
+    --risk-low-soft: rgba(63, 143, 91, 0.12);
+    --risk-medium: #B9791A;
+    --risk-medium-soft: rgba(185, 121, 26, 0.14);
+    --risk-high: #B23A32;
+    --risk-high-soft: rgba(178, 58, 50, 0.12);
+    --shadow: 0 1px 2px rgba(20, 32, 31, 0.06), 0 8px 24px -12px rgba(20, 32, 31, 0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0E1614;
+      --ink: #E8EEEC;
+      --ink-soft: rgba(232, 238, 236, 0.64);
+      --ink-faint: rgba(232, 238, 236, 0.4);
+      --surface: #16211F;
+      --surface-2: #1C2926;
+      --border: #29403C;
+      --accent: #4FC2B6;
+      --accent-soft: rgba(79, 194, 182, 0.14);
+      --risk-low: #5FBF83;
+      --risk-low-soft: rgba(95, 191, 131, 0.14);
+      --risk-medium: #E3A83E;
+      --risk-medium-soft: rgba(227, 168, 62, 0.14);
+      --risk-high: #E2564C;
+      --risk-high-soft: rgba(226, 86, 76, 0.16);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -14px rgba(0, 0, 0, 0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0E1614; --ink: #E8EEEC; --ink-soft: rgba(232, 238, 236, 0.64); --ink-faint: rgba(232, 238, 236, 0.4);
+    --surface: #16211F; --surface-2: #1C2926; --border: #29403C; --accent: #4FC2B6; --accent-soft: rgba(79, 194, 182, 0.14);
+    --risk-low: #5FBF83; --risk-low-soft: rgba(95, 191, 131, 0.14); --risk-medium: #E3A83E; --risk-medium-soft: rgba(227, 168, 62, 0.14);
+    --risk-high: #E2564C; --risk-high-soft: rgba(226, 86, 76, 0.16); --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -14px rgba(0, 0, 0, 0.55);
+  }
+  :root[data-theme="light"] {
+    --paper: #F3F5F4; --ink: #14201F; --ink-soft: rgba(20, 32, 31, 0.62); --ink-faint: rgba(20, 32, 31, 0.38);
+    --surface: #FFFFFF; --surface-2: #E8ECEA; --border: #D7DEDB; --accent: #2F8F86; --accent-soft: rgba(47, 143, 134, 0.12);
+    --risk-low: #3F8F5B; --risk-low-soft: rgba(63, 143, 91, 0.12); --risk-medium: #B9791A; --risk-medium-soft: rgba(185, 121, 26, 0.14);
+    --risk-high: #B23A32; --risk-high-soft: rgba(178, 58, 50, 0.12); --shadow: 0 1px 2px rgba(20, 32, 31, 0.06), 0 8px 24px -12px rgba(20, 32, 31, 0.18);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  .mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .shell { max-width: 860px; margin: 0 auto; padding: 28px 20px 64px; }
+
+  .appbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 30px; height: 30px; border-radius: 8px; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .brand-mark svg { width: 16px; height: 16px; }
+  .brand-name { font-size: 15px; font-weight: 700; letter-spacing: 0.01em; }
+  .brand-sub { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.04em; text-transform: uppercase; }
+
+  .theme-toggle {
+    display: flex; gap: 2px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 2px;
+  }
+  .theme-toggle button {
+    border: none; background: transparent; color: var(--ink-soft); font-size: 11px;
+    padding: 5px 9px; border-radius: 6px; cursor: pointer; font-family: inherit;
+  }
+  .theme-toggle button.active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab {
+    border: none; background: transparent; font-family: inherit; color: var(--ink-faint);
+    font-size: 13px; font-weight: 600; padding: 10px 4px; margin-right: 22px; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s ease;
+  }
+  .tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--ink-soft); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .call-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px 18px; margin-bottom: 16px; box-shadow: var(--shadow);
+  }
+  .call-status-left { display: flex; align-items: center; gap: 12px; }
+  .pulse-dot { position: relative; width: 10px; height: 10px; transition: opacity .2s ease; }
+  .pulse-dot::before, .pulse-dot::after {
+    content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--accent);
+  }
+  .pulse-dot::after { animation: pulse 2.2s ease-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .pulse-dot::after { animation: none; opacity: .4; } }
+  @keyframes pulse { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(2.6); opacity: 0; } }
+  .call-meta-label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); }
+  .call-duration { font-size: 20px; font-weight: 700; margin-top: 1px; }
+  .call-header-right { display: flex; align-items: center; gap: 18px; }
+  .model-chip {
+    font-size: 11px; color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--border);
+    padding: 4px 9px; border-radius: 999px; letter-spacing: 0.01em;
+  }
+  .btn-toggle-listen {
+    border: 1px solid var(--accent); color: var(--accent); background: transparent;
+    font-family: inherit; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 9px; cursor: pointer;
+  }
+  .btn-toggle-listen:hover { background: var(--accent-soft); }
+  .btn-toggle-listen.btn-stop { border-color: var(--risk-high); color: var(--risk-high); }
+  .btn-toggle-listen.btn-stop:hover { background: var(--risk-high-soft); }
+
+  .alert-banner {
+    display: none; align-items: flex-start; gap: 12px; border-radius: 14px; padding: 15px 16px;
+    margin-bottom: 16px; border: 1px solid var(--risk-high); background: var(--risk-high-soft);
+    box-shadow: var(--shadow);
+  }
+  .alert-banner.show { display: flex; }
+  .alert-stripe { width: 4px; align-self: stretch; border-radius: 3px; background: var(--risk-high); flex-shrink: 0; }
+  .alert-icon {
+    width: 30px; height: 30px; border-radius: 8px; background: var(--risk-high); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  }
+  .alert-body { flex: 1; min-width: 0; }
+  .alert-title { font-size: 13px; font-weight: 700; color: var(--risk-high); margin-bottom: 3px; letter-spacing: 0.01em; }
+  .alert-reason { font-size: 14px; line-height: 1.55; }
+  .alert-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .alert-actions button {
+    font-family: inherit; font-size: 12px; font-weight: 600; border-radius: 8px; padding: 6px 12px; cursor: pointer;
+  }
+  .btn-ack { border: 1px solid var(--risk-high); background: var(--risk-high); color: #fff; }
+  .btn-dismiss { border: 1px solid var(--border); background: transparent; color: var(--ink-soft); }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .panel-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .panel-title { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); }
+  .risk-readout { display: flex; align-items: baseline; gap: 6px; }
+  .risk-readout .num { font-size: 26px; font-weight: 700; }
+  .risk-readout .unit { font-size: 12px; color: var(--ink-faint); }
+  .risk-pill { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.02em; }
+  .risk-pill.low { color: var(--risk-low); background: var(--risk-low-soft); }
+  .risk-pill.medium { color: var(--risk-medium); background: var(--risk-medium-soft); }
+  .risk-pill.high { color: var(--risk-high); background: var(--risk-high-soft); }
+
+  .chart-wrap { position: relative; height: 92px; }
+  .chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
+  .chart-grid line { stroke: var(--border); stroke-width: 1; }
+  .chart-area { fill: url(#areaGradCalm); transition: d .3s ease; }
+  .chart-area.alert { fill: url(#areaGradAlert); }
+  .chart-line { fill: none; stroke: var(--risk-low); stroke-width: 2; transition: d .3s ease; }
+  .chart-line.alert { stroke: var(--risk-high); }
+  .chart-endpoint { fill: var(--risk-low); }
+  .chart-endpoint.alert { fill: var(--risk-high); }
+
+  .transcript-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; }
+  .t-row { display: grid; grid-template-columns: 52px 1fr; gap: 12px; padding: 9px 8px; border-radius: 9px; }
+  .t-row.flagged { background: var(--risk-high-soft); }
+  .t-time { font-size: 11px; color: var(--ink-faint); padding-top: 2px; }
+  .t-content { font-size: 14px; line-height: 1.6; }
+  .t-speaker { font-size: 11px; font-weight: 700; color: var(--ink-faint); margin-right: 6px; }
+  .t-row.flagged .t-speaker { color: var(--risk-high); }
+  .t-placeholder { font-size: 13px; color: var(--ink-faint); padding: 12px 8px; }
+
+  .history-row {
+    display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 8px; box-shadow: var(--shadow); cursor: pointer;
+  }
+  .history-row:hover { border-color: var(--accent); }
+  .history-when { font-size: 13px; font-weight: 600; }
+  .history-caller { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
+  .history-dur { font-size: 12px; color: var(--ink-soft); }
+  .placeholder-note {
+    font-size: 13px; color: var(--ink-faint); background: var(--surface-2); border: 1px dashed var(--border);
+    border-radius: 12px; padding: 14px 16px; line-height: 1.6;
+  }
+
+  .field-group { margin-bottom: 22px; }
+  .field-label { font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .field-help { font-size: 12px; color: var(--ink-faint); margin-bottom: 10px; line-height: 1.5; }
+  select.field-input {
+    width: 100%; font-family: inherit; font-size: 13px; padding: 9px 11px; border-radius: 9px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--ink);
+  }
+  .effort-row { display: flex; gap: 6px; }
+  .effort-opt {
+    flex: 1; text-align: center; font-size: 12px; padding: 8px 4px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--ink-soft); cursor: pointer;
+  }
+  .effort-opt.active { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .slider-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .slider-val { font-size: 13px; font-weight: 700; width: 64px; text-align: right; }
+  .chip-list { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    font-size: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px;
+    padding: 5px 10px 5px 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .chip button { border: none; background: none; color: var(--ink-faint); cursor: pointer; font-size: 13px; line-height: 1; padding: 0; }
+  .chip-add {
+    font-size: 12px; border: 1px dashed var(--border); border-radius: 999px; padding: 5px 12px;
+    color: var(--accent); background: transparent; cursor: pointer; font-family: inherit;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="appbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L4 5.5V11c0 5.2 3.4 9.9 8 11 4.6-1.1 8-5.8 8-11V5.5L12 2z" fill="#fff" fill-opacity="0.95"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">AFG 守話</div>
+        <div class="brand-sub">Real-time Call Guard</div>
+      </div>
+    </div>
+    <div class="theme-toggle" id="themeToggle">
+      <button data-theme="light">淺色</button>
+      <button data-theme="dark">深色</button>
+      <button data-theme="auto" class="active">自動</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-screen="live">即時通話</button>
+    <button class="tab" data-screen="history">歷史紀錄</button>
+    <button class="tab" data-screen="settings">設定</button>
+  </div>
+
+  <!-- ============ LIVE ============ -->
+  <div class="screen active" id="screen-live">
+    <div class="call-header">
+      <div class="call-status-left">
+        <div class="pulse-dot" style="opacity:.25;"></div>
+        <div>
+          <div class="call-meta-label">尚未開始監聽</div>
+          <div class="call-duration mono" id="callDuration">00:00</div>
+        </div>
+      </div>
+      <div class="call-header-right">
+        <div class="model-chip mono">claude-opus-5 · medium</div>
+        <button class="btn-toggle-listen" id="btnToggleListen">開始監聽</button>
+      </div>
+    </div>
+
+    <div class="alert-banner" id="alertBanner">
+      <div class="alert-stripe"></div>
+      <div class="alert-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3L2 20h20L12 3z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17h.01" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="alert-body">
+        <div class="alert-title"></div>
+        <div class="alert-reason"></div>
+        <div class="alert-actions">
+          <button class="btn-ack">我知道了，掛斷電話</button>
+          <button class="btn-dismiss">先忽略</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">風險趨勢</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="risk-readout">
+            <span class="num mono" id="riskNum">0</span><span class="unit">/ 100</span>
+          </div>
+          <span class="risk-pill low" id="riskPill">低風險</span>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <svg viewBox="0 0 400 92" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="areaGradCalm" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--risk-low)" stop-opacity="0.28"/>
+              <stop offset="100%" stop-color="var(--risk-low)" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="areaGradAlert" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--risk-high)" stop-opacity="0.32"/>
+              <stop offset="100%" stop-color="var(--risk-high)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <g class="chart-grid">
+            <line x1="0" y1="23" x2="400" y2="23"/>
+            <line x1="0" y1="46" x2="400" y2="46"/>
+            <line x1="0" y1="69" x2="400" y2="69"/>
+          </g>
+          <path id="chartArea" class="chart-area" d="M0,92 L400,92 Z"/>
+          <path id="chartLine" class="chart-line" d="M0,92 L400,92"/>
+          <circle id="chartEndpoint" class="chart-endpoint" cx="0" cy="92" r="4"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><div class="panel-title">通話逐字稿</div></div>
+      <div class="transcript-list" id="transcriptList">
+        <div class="t-placeholder" id="transcriptPlaceholder">按「開始監聽」後，逐字稿會即時顯示在這裡。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HISTORY ============ -->
+  <div class="screen" id="screen-history">
+    <div class="panel-title" style="margin-bottom:12px;">最近通話</div>
+    <div class="placeholder-note">
+      歷史紀錄還沒有接上儲存後端（目前每通電話結束後狀態不會保留）——這個畫面的版面已經照設計稿做好，
+      之後補上 call log 儲存機制後就能直接呈現真實資料，不用重新設計。
+    </div>
+  </div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div class="screen" id="screen-settings">
+    <div class="panel">
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label">推理模型</div>
+        <div class="field-help">
+          目前接的是 Claude（見 antifraud_v3/llm/）。這個選單目前是視覺稿，還沒接到後端設定 API——
+          要換模型/effort 現階段請改 .env 的 LLM_MODEL / LLM_EFFORT。
+        </div>
+        <select class="field-input">
+          <option>claude-opus-5（預設，品質優先）</option>
+          <option>claude-sonnet-5（速度/成本平衡）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label">推理強度 Effort</div>
+        <div class="field-help">每句話都會呼叫 2–3 次模型，強度越高，判斷越仔細但成本也越高。</div>
+        <div class="effort-row">
+          <div class="effort-opt">low</div>
+          <div class="effort-opt active">medium</div>
+          <div class="effort-opt">high</div>
+          <div class="effort-opt">xhigh</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label">示警敏感度</div>
+        <div class="field-help">需要連續幾句話風險都偏高，才會觸發一般示警（不影響「立即示警」關鍵字清單）。</div>
+        <div class="slider-row">
+          <input type="range" min="1" max="5" value="2" id="debounceSlider"/>
+          <span class="slider-val mono" id="debounceVal">2 句</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label">立即示警關鍵字</div>
+        <div class="field-help">符合以下任一項目，不用等連續累積即可直接示警（見 reasoning/rubric.py 的 DEFAULT_HARD_TRIGGERS）。</div>
+        <div class="chip-list">
+          <span class="chip">簡訊驗證碼 <button>&times;</button></span>
+          <span class="chip">圈存 / 保護帳戶 <button>&times;</button></span>
+          <span class="chip">轉帳到指定帳戶 <button>&times;</button></span>
+          <span class="chip">不要告訴家人 <button>&times;</button></span>
+          <button class="chip-add">+ 新增</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

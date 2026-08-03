@@ -167,7 +167,7 @@ No labeled fraud-call dataset exists and won't soon — design evaluation around
 
 ## 7. Why a clean rewrite, not in-place edits to `antifraud_v2`
 
-The unit of work changes from "whole call" to "chunk," which touches nearly every module's function signature (`analyze_speech_features(audio_file_path)` → something taking an in-memory chunk + running state; `detect_fraud_patterns` → an LLM reasoning call; `multimodal_fusion` → deleted, folded into synthesize). Maintaining `antifraud_v2/main.py`'s batch mode alongside a parallel streaming path in the same files means maintaining two execution models in one codebase — more work for a solo dev, not less. `antifraud_v2/` stays as-is (already correctness-fixed per `FALSE_POSITIVE_REVIEW.md`, still a working batch-analysis tool) and can be deprecated once `antifraud_v3/` covers its use case.
+The unit of work changes from "whole call" to "chunk," which touches nearly every module's function signature (`analyze_speech_features(audio_file_path)` → something taking an in-memory chunk + running state; `detect_fraud_patterns` → an LLM reasoning call; `multimodal_fusion` → deleted, folded into synthesize). Maintaining `antifraud_v2/main.py`'s batch mode alongside a parallel streaming path in the same files means maintaining two execution models in one codebase — more work for a solo dev, not less. `antifraud_v2/` has been deleted from the working directory (recoverable via the `git` snapshot commit made immediately before deletion, `0c66823`, since this repo has no other history) — the project is now committing fully to `antifraud_v3/` rather than keeping the old batch tool around as a fallback.
 
 ---
 
@@ -209,6 +209,10 @@ Build for (1) now; note (2)/(3) as an upgrade path, not something to build up fr
 Directly informed by the CHI paper's (`../references/10-chi-realtime-scam-warning.md`) recall-vs-timeliness finding: an alert should say *why*, not just flash a risk number, or the user has no way to judge whether to trust it. Dismissing an alert maps directly onto the `alert_issued → resolved` transition already in the §2.4 state machine, so acknowledgment isn't a UI-only concept bolted on top — it's wired into the same state the backend already tracks.
 
 This keeps UI scoped proportionately: a real, load-bearing part of the system (chunk update → push → live view; call end → history log; settings change → provider re-init) rather than an afterthought, but still sized for what one person builds and maintains, not a multi-platform product.
+
+### Design direction (for the demo)
+
+A clickable HTML design mockup of all three screens (live monitoring with a calm→alert state toggle, history, settings) has been built and published: https://claude.ai/code/artifact/4b62043b-eaa0-43a9-acd1-f7701f92675f — token system: a "night operations console" concept (calm, low-chrome baseline that escalates visually only when risk actually rises), teal/harbor accent (`#2F8F86` light / `#4FC2B6` dark) kept separate from the semantic risk colors (green/amber/red), system Traditional-Chinese font stack for transcript/body content (deliberate choice — the interface is predominantly Chinese-language, so an embedded Latin webfont would only cover the English micro-labels), and a monospace face reserved for numeric telemetry (call duration, timestamps, risk score) for a console-readout feel. This is the reference to build `antifraud_v3/frontend/` against — implementation should follow its token system rather than restarting the design decisions from scratch.
 
 ---
 
