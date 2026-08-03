@@ -44,6 +44,11 @@
   只需要新增一個 class，不用動推理邏輯本身。
 - **情緒辨識（TIMNet）刻意當弱訊號用**，不是硬性門檻——訓練語料是英/德/義等語言的表演式情緒語料，
   不是中文電話對話，實測對這個場景的預測不太準，所以只當 LLM 推理時的參考證據之一。
+- **除了即時監聽，也可以上傳事後錄好的通話錄音分析**（`POST /api/upload-call`，前端「上傳錄音分析」
+  分頁）——跑一樣的 VAD 切句 + per-chunk pipeline，差別只在於同步跑完整段錄音、一次回傳結果，而不是
+  像即時通話一樣用 WebSocket 逐句推送（批次分析不像即時監聽那樣對延遲敏感，見
+  `antifraud_v3/server/upload.py` 開頭的說明）。結果一樣會存進歷史紀錄，用 `source` 欄位跟即時通話
+  區分開來。
 
 ## 安裝與設定
 
@@ -69,6 +74,11 @@ uvicorn antifraud_v3.server.main:app --reload
 
 開瀏覽器連 `http://localhost:8000`，允許麥克風權限後按「開始監聽」。
 
+**在手機瀏覽器上用**（在真實通話中即時監聽的實際使用情境）：瀏覽器只有在 `https://` 或
+`http://localhost` 底下才會允許存取麥克風，用手機連到區網或公網上另一台機器的 `http://` 網址不會
+跳出權限請求。跑 HTTPS 有兩種驗證過可行的做法（自簽憑證給區網用、或用 `cloudflared` 之類的通道服務
+拿到一個公開的 HTTPS 網址），完整步驟見 [`antifraud_v3/docs/HTTPS.md`](antifraud_v3/docs/HTTPS.md)。
+
 ## 專案結構
 
 ```
@@ -78,24 +88,42 @@ antifraud_v3/
 ├── llm/            可插拔 LLM 供應商介面 + Claude 實作
 ├── reasoning/       判別/反思/綜合推理引擎、詐騙話術 rubric、Pydantic schema
 ├── pipeline/        單一 chunk 的處理流程整合、通話狀態機（risk trajectory、示警 debounce）
-├── server/          FastAPI app、WebSocket 即時端點、REST API（歷史紀錄／設定）
+├── server/          FastAPI app、WebSocket 即時端點、REST API（歷史紀錄／設定／上傳分析）
 ├── storage/         SQLite 通話歷史、JSON 設定檔存取
-├── frontend/        即時通話／歷史紀錄／設定三個畫面（純 HTML/CSS/JS，無框架）
+├── frontend/        即時通話／上傳分析／歷史紀錄／設定四個畫面（純 HTML/CSS/JS，無框架）
 ├── models/          TIMNet 模型架構與訓練好的權重檔
 ├── eval/            沒有標註資料集時的自我測試框架（regression log + 真人語音測試集）
-└── docs/DESIGN.md   完整設計決策記錄（架構、取捨、風險），程式碼註解裡常引用這份文件
+├── tests/           pytest 單元測試（見下方「測試」一節）
+└── docs/            DESIGN.md（完整設計決策記錄）、HTTPS.md（手機瀏覽器連線設定）
 ```
 
-## 測試現況
+## 測試
 
-已用真實中文語音（`edge-tts` 生成）+ headless 瀏覽器（Playwright，模擬麥克風輸入）跑過完整流程，
-確認麥克風擷取、VAD 切句、語音辨識、聲學特徵、LLM 推理到示警全部串接正確，也確認詐騙情境與正常
-聊天情境的判斷結果符合預期（`eval/test_clips/` 底下有兩段測試音檔可參考）。
+**自動化測試**（`antifraud_v3/tests/`）：
+
+```bash
+cd /home/tommy/Project/AFG
+pytest                        # 完整套件，包含會打真的 Claude API 的 live_api 測試
+pytest -m "not live_api"      # 只跑快速、不用網路的單元測試（CI/沒有 API 額度時用這個）
+```
+
+大部分測試用一個假的 `LLMProvider`（`tests/conftest.py` 的 `FakeLLMProvider`）跟暫存的
+DB／設定檔路徑，不會碰到真正的 API 額度或 `antifraud_v3/data/` 底下的正式資料。少數標了
+`@pytest.mark.live_api` 的測試會真的呼叫 Claude API，當作跟真實模型行為對齊的 smoke test。
+
+**手動/端對端驗證**：已用真實中文語音（`edge-tts` 生成，`eval/test_clips/` 底下 scam/benign 各
+10 段，涵蓋銀行/公務機關假冒、投資詐騙、假綁架等多種話術，以及冷靜語氣、慢語速、跟詐騙無關的抱怨
+等已知容易誤判的正常對話情境）+ headless 瀏覽器（Playwright，模擬麥克風輸入／檔案上傳）跑過完整
+流程，確認麥克風擷取、VAD 切句、語音辨識、聲學特徵、LLM 推理到示警全部串接正確。跑
+`python -m antifraud_v3.eval.run_test_set` 會把每段測試音檔的判斷結果記錄到
+`eval/regression_log.jsonl`，改動 prompt/rubric 後可以快速比對有沒有退步。
 
 **已知還沒做的**：
 - 語者分離——目前分不出通話中「誰在講話」，聲學/情緒特徵是整段混合訊號的統計量。
 - AI 合成語音／換聲偵測——完全沒涵蓋這塊風險，見 `references/04-asvspoof5.md`。
 - 歷史紀錄/設定畫面沒有帳號或多裝置同步機制，單機本地使用。
+- 上傳分析目前只吃 `soundfile`（libsndfile）能直接解碼的格式（wav/flac/ogg）——手機錄音常見的
+  m4a/mp3 需要先用 ffmpeg 轉檔，見 `server/upload.py` 的錯誤訊息。
 
 ## 文獻
 
