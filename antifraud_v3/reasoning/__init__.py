@@ -5,11 +5,18 @@ from .schemas import ChunkEvidence, DiscriminateResult, ReflectResult, Synthesiz
 from .synthesize import synthesize
 
 
-def run_reasoning_pipeline(provider: LLMProvider, evidence: ChunkEvidence) -> SynthesizeResult:
-    """discriminate -> reflect -> synthesize, in order. See REWRITE_PLAN.md §4."""
+def run_reasoning_pipeline(
+    provider: LLMProvider, evidence: ChunkEvidence, hard_triggers: list[str] | None = None
+) -> SynthesizeResult:
+    """discriminate -> reflect -> synthesize, in order. See REWRITE_PLAN.md §4.
+
+    hard_triggers defaults to rubric.DEFAULT_HARD_TRIGGERS when omitted; pass the live
+    settings-store value (storage/settings_store.py) to respect user edits from the Settings
+    screen.
+    """
     discriminated = discriminate(provider, evidence)
     reflected = reflect(provider, evidence, discriminated)
-    return synthesize(provider, evidence, reflected)
+    return synthesize(provider, evidence, reflected, hard_triggers=hard_triggers)
 
 
 __all__ = [

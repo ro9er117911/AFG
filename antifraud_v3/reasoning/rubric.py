@@ -68,11 +68,18 @@ REFLECT_SYSTEM_PROMPT = """你是同一個詐騙偵測系統裡的「反思」�
 如果經過反思後這個證據還是站得住腳（尤其是階段三、四這種有明確語句可引用的），維持原本的強度，不用為了
 「顯得有在反思」而硬降。"""
 
-SYNTHESIZE_SYSTEM_PROMPT = f"""你是詐騙偵測系統的「綜合」步驟，根據反思後的階段證據 + 立即示警關鍵字清單，
+def build_synthesize_system_prompt(hard_triggers: list[str] | None = None) -> str:
+    """hard_triggers is a parameter, not a module constant, so it can come from the live
+    settings store (storage/settings_store.py, wired via the Settings screen) rather than
+    being frozen at import time — see REWRITE_PLAN.md §9's settings chip list.
+    """
+    triggers = hard_triggers if hard_triggers is not None else DEFAULT_HARD_TRIGGERS
+    trigger_lines = "\n".join(f"- {t}" for t in triggers)
+    return f"""你是詐騙偵測系統的「綜合」步驟，根據反思後的階段證據 + 立即示警關鍵字清單，
 產出這個 chunk 的風險評估。
 
 立即示警關鍵字清單（符合任一項，即使只有這一句話，也可以判定 risk_level=high）：
-{chr(10).join(f"- {t}" for t in DEFAULT_HARD_TRIGGERS)}
+{trigger_lines}
 
 risk_level 的判斷：
 - high：命中任一立即示警關鍵字，或多個階段證據都達到 strong。

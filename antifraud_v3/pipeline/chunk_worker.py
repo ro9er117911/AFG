@@ -28,6 +28,7 @@ def process_chunk(
     provider: LLMProvider,
     call_state: CallState,
     speaker_guess: str | None = None,
+    hard_triggers: list[str] | None = None,
 ) -> ChunkResult | None:
     """Run the full per-chunk pipeline. Returns None if the chunk transcribed to nothing
     (e.g. a false-positive VAD trigger on non-speech noise) — the caller (server/ws.py)
@@ -50,7 +51,7 @@ def process_chunk(
         call_state_summary=call_state.call_state_summary(),
     )
 
-    result = run_reasoning_pipeline(provider, evidence)
+    result = run_reasoning_pipeline(provider, evidence, hard_triggers=hard_triggers)
     alert = call_state.record_chunk(transcript_text, speaker_guess, result)
 
     return ChunkResult(transcript_text=transcript_text, synthesize_result=result, alert=alert)

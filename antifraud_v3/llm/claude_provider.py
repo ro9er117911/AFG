@@ -41,6 +41,15 @@ class ClaudeProvider(LLMProvider):
             raise LLMProviderError(f"Claude connection error: {e}") from e
         except anthropic.APIStatusError as e:
             raise LLMProviderError(f"Claude API error ({e.status_code}): {e.message}") from e
+        except Exception as e:
+            # Confirmed by real testing (no ANTHROPIC_API_KEY / `ant auth login` profile
+            # configured): the SDK raises a plain TypeError from _build_headers() when no
+            # credentials resolve at all — before any HTTP request is even attempted, so it
+            # isn't one of the anthropic.* response-error classes above. Catch broadly here
+            # so a missing-credentials dev environment degrades to a clean, catchable
+            # LLMProviderError instead of an unhandled exception killing the caller
+            # (server/ws.py's WebSocket loop, in particular).
+            raise LLMProviderError(f"Claude request failed: {e}") from e
 
         if response.stop_reason == "refusal":
             raise LLMProviderError(

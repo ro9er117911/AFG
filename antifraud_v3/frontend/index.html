@@ -154,6 +154,15 @@
   .btn-ack { border: 1px solid var(--risk-high); background: var(--risk-high); color: #fff; }
   .btn-dismiss { border: 1px solid var(--border); background: transparent; color: var(--ink-soft); }
 
+  /* system-status banner — deliberately NOT risk-colored (amber/neutral), so a connection
+     or pipeline error is never visually confusable with a real fraud alert */
+  .system-banner {
+    display: none; align-items: center; gap: 10px; border-radius: 12px; padding: 11px 14px;
+    margin-bottom: 16px; border: 1px solid var(--risk-medium); background: var(--risk-medium-soft);
+    font-size: 13px; color: var(--ink);
+  }
+  .system-banner.show { display: flex; }
+
   .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
   .panel-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
   .panel-title { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); }
@@ -268,6 +277,8 @@
       </div>
     </div>
 
+    <div class="system-banner" id="systemBanner"></div>
+
     <div class="alert-banner" id="alertBanner">
       <div class="alert-stripe"></div>
       <div class="alert-icon">
@@ -328,9 +339,8 @@
   <!-- ============ HISTORY ============ -->
   <div class="screen" id="screen-history">
     <div class="panel-title" style="margin-bottom:12px;">最近通話</div>
-    <div class="placeholder-note">
-      歷史紀錄還沒有接上儲存後端（目前每通電話結束後狀態不會保留）——這個畫面的版面已經照設計稿做好，
-      之後補上 call log 儲存機制後就能直接呈現真實資料，不用重新設計。
+    <div id="historyList">
+      <div class="placeholder-note" id="historyPlaceholder">還沒有通話紀錄——結束一次「開始監聽」就會出現在這裡。</div>
     </div>
   </div>
 
@@ -339,13 +349,10 @@
     <div class="panel">
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label">推理模型</div>
-        <div class="field-help">
-          目前接的是 Claude（見 antifraud_v3/llm/）。這個選單目前是視覺稿，還沒接到後端設定 API——
-          要換模型/effort 現階段請改 .env 的 LLM_MODEL / LLM_EFFORT。
-        </div>
-        <select class="field-input">
-          <option>claude-opus-5（預設，品質優先）</option>
-          <option>claude-sonnet-5（速度/成本平衡）</option>
+        <div class="field-help">目前接的是 Claude（見 antifraud_v3/llm/）。變更後下一通電話開始生效。</div>
+        <select class="field-input" id="modelSelect">
+          <option value="claude-opus-5">claude-opus-5（預設，品質優先）</option>
+          <option value="claude-sonnet-5">claude-sonnet-5（速度/成本平衡）</option>
         </select>
       </div>
     </div>
@@ -354,11 +361,11 @@
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label">推理強度 Effort</div>
         <div class="field-help">每句話都會呼叫 2–3 次模型，強度越高，判斷越仔細但成本也越高。</div>
-        <div class="effort-row">
-          <div class="effort-opt">low</div>
-          <div class="effort-opt active">medium</div>
-          <div class="effort-opt">high</div>
-          <div class="effort-opt">xhigh</div>
+        <div class="effort-row" id="effortRow">
+          <div class="effort-opt" data-value="low">low</div>
+          <div class="effort-opt" data-value="medium">medium</div>
+          <div class="effort-opt" data-value="high">high</div>
+          <div class="effort-opt" data-value="xhigh">xhigh</div>
         </div>
       </div>
     </div>
@@ -378,13 +385,7 @@
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label">立即示警關鍵字</div>
         <div class="field-help">符合以下任一項目，不用等連續累積即可直接示警（見 reasoning/rubric.py 的 DEFAULT_HARD_TRIGGERS）。</div>
-        <div class="chip-list">
-          <span class="chip">簡訊驗證碼 <button>&times;</button></span>
-          <span class="chip">圈存 / 保護帳戶 <button>&times;</button></span>
-          <span class="chip">轉帳到指定帳戶 <button>&times;</button></span>
-          <span class="chip">不要告訴家人 <button>&times;</button></span>
-          <button class="chip-add">+ 新增</button>
-        </div>
+        <div class="chip-list" id="hardTriggerList"></div>
       </div>
     </div>
   </div>

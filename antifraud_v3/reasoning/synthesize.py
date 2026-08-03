@@ -1,10 +1,13 @@
 from ..llm.base import LLMProvider
-from .rubric import SYNTHESIZE_SYSTEM_PROMPT
+from .rubric import build_synthesize_system_prompt
 from .schemas import ChunkEvidence, ReflectResult, SynthesizeResult
 
 
 def synthesize(
-    provider: LLMProvider, evidence: ChunkEvidence, reflected: ReflectResult
+    provider: LLMProvider,
+    evidence: ChunkEvidence,
+    reflected: ReflectResult,
+    hard_triggers: list[str] | None = None,
 ) -> SynthesizeResult:
     stage_lines = "\n".join(
         f"- {s.stage}: {s.revised_strength}"
@@ -17,7 +20,7 @@ def synthesize(
         "根據以上證據與立即示警關鍵字清單，產出這個 chunk 的風險評估。"
     )
     return provider.structured_complete(
-        system=SYNTHESIZE_SYSTEM_PROMPT,
+        system=build_synthesize_system_prompt(hard_triggers),
         user_content=user_content,
         schema=SynthesizeResult,
     )

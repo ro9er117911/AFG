@@ -1,6 +1,5 @@
-// Real WebSocket + mic wiring for the live-call screen. History and settings screens are
-// still visual-only placeholders (REWRITE_PLAN.md §9 describes them, but no history-persistence
-// or settings-config API has been built yet) — see the TODO markers below.
+// Real WebSocket + mic wiring for the live-call screen, plus REST calls for the History and
+// Settings screens (server/api.py) — see REWRITE_PLAN.md §9.
 
 const SERVER_SAMPLE_RATE = 16000;
 const MAX_CHART_POINTS = 40;
@@ -32,6 +31,8 @@ document.querySelectorAll('.tab').forEach((tab) =>
     tab.classList.add('active');
     document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
     document.getElementById('screen-' + tab.dataset.screen).classList.add('active');
+    if (tab.dataset.screen === 'history') loadHistory();
+    if (tab.dataset.screen === 'settings') loadSettings();
   })
 );
 
@@ -112,14 +113,30 @@ document.querySelector('.btn-dismiss').addEventListener('click', () => {
   document.getElementById('alertBanner').classList.remove('show');
 });
 
+// ---- system status (connection/pipeline errors — kept visually distinct from the fraud
+// alert banner above, see index.html's .system-banner comment) ----
+function showSystemMessage(text) {
+  const banner = document.getElementById('systemBanner');
+  banner.textContent = text;
+  banner.classList.add('show');
+}
+function hideSystemMessage() {
+  document.getElementById('systemBanner').classList.remove('show');
+}
+
 // ---- server messages ----
 function handleServerMessage(event) {
   const msg = JSON.parse(event.data);
   if (msg.type === 'chunk_update') {
+    hideSystemMessage();
     appendTranscriptRow(msg, msg.risk_level === 'high');
     pushRiskPoint(msg.chunk_risk_score, msg.risk_level);
   } else if (msg.type === 'alert') {
     showAlert(msg);
+  } else if (msg.type === 'error') {
+    // Surfaces e.g. a missing/invalid ANTHROPIC_API_KEY (see .env.example) — confirmed by
+    // testing that without this, the pipeline error silently dropped the connection instead.
+    showSystemMessage('分析發生問題：' + msg.message);
   }
 }
 
@@ -160,8 +177,15 @@ async function startListening() {
   ws = new WebSocket(`ws://${location.host}/ws/call`);
   ws.binaryType = 'arraybuffer';
   ws.onmessage = handleServerMessage;
-  ws.onerror = (e) => console.error('WebSocket error', e);
+  ws.onerror = (e) => {
+    console.error('WebSocket error', e);
+    showSystemMessage('連線發生錯誤，請檢查伺服器是否正常運作。');
+  };
+  ws.onclose = (e) => {
+    if (!e.wasClean) showSystemMessage('與伺服器的連線已中斷。');
+  };
   ws.onopen = () => {
+    hideSystemMessage();
     workletNode.port.onmessage = (event) => {
       if (ws.readyState === WebSocket.OPEN) ws.send(event.data.buffer);
     };
@@ -195,17 +219,123 @@ document.getElementById('btnToggleListen').addEventListener('click', () => {
   });
 });
 
-// ---- settings: visual-only for now (TODO: wire to a real config API) ----
+// ---- history (server/api.py: GET /api/calls) ----
+const RISK_LABELS = { low: '低風險', medium: '中風險', high: '高風險' };
+
+function formatWhen(unixSeconds) {
+  const d = new Date(unixSeconds * 1000);
+  return d.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function formatDuration(seconds) {
+  const s = Math.round(seconds || 0);
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+}
+
+async function loadHistory() {
+  const container = document.getElementById('historyList');
+  let calls;
+  try {
+    calls = await (await fetch('/api/calls')).json();
+  } catch (err) {
+    container.innerHTML = `<div class="placeholder-note">無法載入歷史紀錄：${err.message}</div>`;
+    return;
+  }
+  if (!calls.length) {
+    container.innerHTML = '<div class="placeholder-note" id="historyPlaceholder">還沒有通話紀錄——結束一次「開始監聽」就會出現在這裡。</div>';
+    return;
+  }
+  container.innerHTML = calls
+    .map(
+      (c) => `
+    <div class="history-row">
+      <div>
+        <div class="history-when">${formatWhen(c.started_at)}</div>
+        <div class="history-caller">通話 #${c.id}${c.ended_reason === 'disconnected' ? '（連線中斷結束）' : ''}</div>
+      </div>
+      <div class="history-dur mono">${formatDuration(c.duration_seconds)}</div>
+      <span class="risk-pill ${c.final_risk_level || 'low'}">${RISK_LABELS[c.final_risk_level] || '低風險'}</span>
+    </div>`
+    )
+    .join('');
+}
+
+// ---- settings (server/api.py: GET/POST /api/settings) ----
 const debounceSlider = document.getElementById('debounceSlider');
 const debounceVal = document.getElementById('debounceVal');
+const modelSelect = document.getElementById('modelSelect');
+const effortRow = document.getElementById('effortRow');
+const hardTriggerList = document.getElementById('hardTriggerList');
+
+let currentHardTriggers = [];
+
+function renderHardTriggers() {
+  hardTriggerList.innerHTML =
+    currentHardTriggers.map((t, i) => `<span class="chip">${t} <button data-idx="${i}">&times;</button></span>`).join('') +
+    '<button class="chip-add" id="chipAddBtn">+ 新增</button>';
+
+  hardTriggerList.querySelectorAll('.chip button').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      currentHardTriggers.splice(Number(btn.dataset.idx), 1);
+      renderHardTriggers();
+      saveSettings({ hard_triggers: currentHardTriggers });
+    })
+  );
+  document.getElementById('chipAddBtn').addEventListener('click', () => {
+    const text = prompt('新增立即示警關鍵字（描述句，不是精確比對字串）：');
+    if (text && text.trim()) {
+      currentHardTriggers.push(text.trim());
+      renderHardTriggers();
+      saveSettings({ hard_triggers: currentHardTriggers });
+    }
+  });
+}
+
+async function saveSettings(partial) {
+  try {
+    await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(partial),
+    });
+  } catch (err) {
+    console.error('Failed to save settings', err);
+  }
+}
+
+async function loadSettings() {
+  let settings;
+  try {
+    settings = await (await fetch('/api/settings')).json();
+  } catch (err) {
+    console.error('Failed to load settings', err);
+    return;
+  }
+
+  modelSelect.value = settings.llm_model;
+  debounceSlider.value = settings.debounce_chunks;
+  debounceVal.textContent = settings.debounce_chunks + ' 句';
+  effortRow.querySelectorAll('.effort-opt').forEach((opt) =>
+    opt.classList.toggle('active', opt.dataset.value === settings.llm_effort)
+  );
+  currentHardTriggers = [...settings.hard_triggers];
+  renderHardTriggers();
+
+  // Also reflect the active model/effort in the live-call header chip.
+  document.querySelector('.model-chip').textContent = `${settings.llm_model} · ${settings.llm_effort}`;
+}
+
+modelSelect.addEventListener('change', () => saveSettings({ llm_model: modelSelect.value }));
 debounceSlider.addEventListener('input', () => {
   debounceVal.textContent = debounceSlider.value + ' 句';
 });
-document.querySelectorAll('.effort-opt').forEach((opt) =>
+debounceSlider.addEventListener('change', () => saveSettings({ debounce_chunks: Number(debounceSlider.value) }));
+effortRow.querySelectorAll('.effort-opt').forEach((opt) =>
   opt.addEventListener('click', () => {
-    document.querySelectorAll('.effort-opt').forEach((o) => o.classList.remove('active'));
+    effortRow.querySelectorAll('.effort-opt').forEach((o) => o.classList.remove('active'));
     opt.classList.add('active');
+    saveSettings({ llm_effort: opt.dataset.value });
   })
 );
 
 renderChart();
+loadSettings();

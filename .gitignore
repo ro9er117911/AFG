@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .env
 *.log
+antifraud_v3/data/
