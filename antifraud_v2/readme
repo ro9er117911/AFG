@@ -1,0 +1,84 @@
+# AntiFraudGPT - 音訊情緒分析系統
+
+這是一個基於 Streamlit 的音訊情緒分析系統，專門用於偵測通話中的詐欺可能性。系統會分析音訊特徵、語音情緒，並提供詐欺風險評估。
+
+## 專案結構
+
+```
+antifruad-gpt/
+├── main.py                     # 主應用程式
+├── audio_processing.py         # 音訊處理模組
+├── model_handling.py           # 模型加載和預測模組
+├── visualization.py            # 視覺化圖表模組
+├── language_processing.py      # 語言處理（轉錄和分析）模組
+├── utils.py                    # 工具函數模組
+├── requirements.txt            # 依賴套件清單
+├── .env                        # 環境變數設定 (未納入版本控制)
+└── models/                     # 模型相關檔案
+    ├── __init__.py             # 模型初始化檔案
+    ├── TIM.py                  # TIM 模型架構
+    └── TIM-7_False_drop25_mfcc_smoothTrue_epoch500_l2re1_lr005_best.pt  # 預訓練模型
+```
+
+## 模組說明
+
+### main.py
+
+主應用程式，負責 Streamlit 的界面交互和整合其他模組的功能。
+
+### audio_processing.py
+
+處理音訊檔案，提取 MFCC 特徵、分析語速、音高和音量等特徵。
+
+### model_handling.py
+
+加載預訓練的情緒分析模型，並提供情緒預測的功能。
+
+### visualization.py
+
+創建各種視覺化圖表，包括波形圖、雷達圖、3D 情緒圖等。
+
+### language_processing.py
+
+使用 Whisper 進行語音轉文字，並通過 GPT-4 分析詐欺可能性。
+
+### utils.py
+
+包含各種輔助函數，如情緒翻譯和風險等級判斷。
+
+### models/TIM.py
+
+定義 TIMNet 模型的架構，用於情緒分析。
+
+## 安裝
+1. 安裝依賴套件
+
+```bash
+pip install -r requirements.txt
+```
+
+2. 創建 `.env` 檔案並填入 OpenAI API 金鑰
+
+```
+OPENAI_API_KEY=your_key_here
+```
+
+## 運行
+
+```bash
+streamlit run main.py
+```
+
+## 使用方法
+
+1. 上傳音訊檔案 (MP3, WAV, OGG 格式)
+2. 系統會自動分析音訊並顯示情緒分析結果
+3. 點擊「詳細分析」可查看深度分析和詐欺可能性評估
+4. 基於詐欺可能性，系統會提供風險等級和處理建議
+
+## 技術說明
+
+- 使用 TIMNet 模型進行情緒分析
+- 使用 Whisper 模型進行語音轉文字
+- 使用 GPT-4 進行詐欺風險評估
+- 使用 Plotly 和 Matplotlib 進行視覺化
