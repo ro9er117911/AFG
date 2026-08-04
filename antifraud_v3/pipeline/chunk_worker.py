@@ -35,6 +35,7 @@ def _compact_acoustic(features: dict) -> dict:
     p, v, t, sr = features["pitch"], features["volume"], features["tremor"], features["speech_rate"]
     return {
         "mean_pitch": round(p["mean_pitch"], 1) if p["valid_samples"] > 0 else None,
+        "pitch_instability": round(p["pitch_instability"], 2) if p["valid_samples"] > 0 else None,
         "mean_volume": round(v["mean_volume"], 4),
         "jitter_local": round(t["jitter_local"], 2),
         "shimmer_local": round(t["shimmer_local"], 2),
@@ -54,6 +55,9 @@ class ChunkSignalsResult:
     acoustic: dict
     emotion: dict
     alert: Alert | None  # from the live keyword hard-trigger check, not the LLM
+    # Only non-None on the one chunk where CallState.maybe_set_baseline() just established it —
+    # every other chunk carries None so callers don't resend/rechart an unchanged baseline.
+    baseline: dict | None = None
 
 
 def process_chunk_signals(
@@ -68,14 +72,15 @@ def process_chunk_signals(
     non-speech noise) — the caller (server/ws.py, server/upload.py) should skip pushing an
     update in that case.
 
-    timestamp is forwarded to CallState.record_chunk_signals() — see that method's docstring.
+    timestamp is forwarded to CallState.record_chunk_signals() and maybe_set_baseline() — see
+    those methods' docstrings for why batch/upload callers need the override.
     """
     transcript_text = transcribe_chunk(y, sr)
     if not transcript_text:
         return None
 
     acoustic_features = extract_acoustic_features(y, sr)
-    call_state.maybe_set_baseline(acoustic_features)
+    baseline_just_set = call_state.maybe_set_baseline(acoustic_features, timestamp=timestamp)
     emotion_label, emotion_probs = predict_emotion(y, sr)
 
     call_state.record_chunk_signals(
@@ -87,6 +92,7 @@ def process_chunk_signals(
         acoustic=_compact_acoustic(acoustic_features),
         emotion=_compact_emotion(emotion_label, emotion_probs),
         alert=alert,
+        baseline=call_state.baseline if baseline_just_set else None,
     )
 
 
@@ -114,6 +120,13 @@ def run_final_analysis(
     acoustic_summary = summarize_acoustic_features(
         aggregate_acoustic_features([cs.acoustic_features for cs in call_state.chunk_signals])
     )
+    if call_state.audio_quality and call_state.audio_quality.get("narrowband"):
+        # See audio/quality.py's detect_bandwidth — set by server/upload.py for pre-recorded
+        # telephone-quality uploads (never for live mic calls). Appended as plain text into the
+        # same prompt field the LLM already reads, consistent with the project's existing
+        # "acoustic evidence is weak/contextual, not a hard signal" philosophy (rubric.py) —
+        # not a new numeric threshold, just a caveat on how much to trust it.
+        acoustic_summary += "；（此錄音為電話頻寬音訊，聲學細節可信度較低，應視為弱證據）"
     emotion_summary = summarize_emotion(
         aggregate_emotion([cs.emotion_probs for cs in call_state.chunk_signals])
     )

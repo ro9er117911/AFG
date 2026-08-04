@@ -27,6 +27,7 @@ from antifraud_v3.llm import LLMProviderError
 from antifraud_v3.pipeline.chunk_worker import ChunkSignalsResult
 from antifraud_v3.reasoning.schemas import ChunkEvidence, HardTriggerHit, SynthesizeResult
 from antifraud_v3.storage import history
+from antifraud_v3.tests.conftest import DEFAULT_FRAUD_TYPE
 
 EMPTY_ACOUSTIC_FEATURES = {
     "pitch": {"mean_pitch": 0.0, "valid_samples": 0},
@@ -132,6 +133,7 @@ def test_upload_call_streams_chunk_updates_alerts_and_final_analysis(client, mon
                 hard_triggers=[HardTriggerHit(name="OTP要求", fired=True, quote="請提供簡訊驗證碼")],
                 justification="要求提供驗證碼",
                 case_memory_update="已要求驗證碼",
+                fraud_type=DEFAULT_FRAUD_TYPE,
             )
         ),
     )

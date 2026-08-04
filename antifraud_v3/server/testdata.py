@@ -55,7 +55,7 @@ def get_test_clip_audio(category: str, filename: str):
 @router.post("/{category}/{filename}/analyze")
 def analyze_test_clip(category: str, filename: str):
     path = _safe_clip_path(category, filename)
-    y = _decode_audio(path.read_bytes(), filename)
+    y, quality = _decode_audio(path.read_bytes(), filename)
 
     settings = load_settings()
     try:
@@ -64,6 +64,7 @@ def analyze_test_clip(category: str, filename: str):
         raise HTTPException(status_code=502, detail=str(e)) from e
 
     call_state = CallState()
+    call_state.audio_quality = quality
     duration_seconds = len(y) / SAMPLE_RATE
     start = time.monotonic()
 

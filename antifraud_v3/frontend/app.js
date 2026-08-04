@@ -124,48 +124,78 @@ const uploadChart = makeChartRenderer({
   riskNum: 'uploadRiskNum', riskPill: 'uploadRiskPill',
 });
 
-// ---- pitch (acoustic) chart ----
-// Separate from the risk chart above: this streams live during the call itself (ASR/acoustic/
+// ---- acoustic metric charts (pitch + 3a's jitter/shimmer/HNR/pause/speech-rate) ----
+// Separate from the risk chart above: these stream live during the call itself (ASR/acoustic/
 // emotion, no LLM — pipeline/chunk_worker.py's process_chunk_signals), one point per chunk.
 // The risk chart only ever gets one point, once the end-of-call LLM analysis finishes.
-const PITCH_MIN_HZ = 60;
-const PITCH_MAX_HZ = 320;
+//
+// buildMetricPath/makeMetricChartRenderer generalize what used to be pitch-only rendering code
+// (buildPitchPath/makePitchChartRenderer) so the same machinery draws all six acoustic
+// sparklines, each with its own sensible domain — see METRIC_DEFS below.
 const PITCH_CHART_H = 56;
+const METRIC_CHART_H = 34;
 
-function buildPitchPath(pts, w, h) {
-  if (pts.length === 0) return { line: `M0,${h} L${w},${h}`, area: `M0,${h} L${w},${h} Z`, endX: w, endY: h };
-  const step = pts.length > 1 ? w / (pts.length - 1) : 0;
-  const toY = (hz) => {
-    const clamped = Math.min(PITCH_MAX_HZ, Math.max(PITCH_MIN_HZ, hz));
-    return h - ((clamped - PITCH_MIN_HZ) / (PITCH_MAX_HZ - PITCH_MIN_HZ)) * h;
+const METRIC_DEFS = {
+  mean_pitch: { label: '音高', unit: 'Hz', min: 60, max: 320, digits: 0, h: PITCH_CHART_H },
+  jitter_local: { label: 'Jitter', unit: '%', min: 0, max: 5, digits: 2, h: METRIC_CHART_H },
+  shimmer_local: { label: 'Shimmer', unit: '%', min: 0, max: 10, digits: 2, h: METRIC_CHART_H },
+  hnr: { label: 'HNR', unit: 'dB', min: 0, max: 30, digits: 1, h: METRIC_CHART_H },
+  pause_ratio: { label: '停頓佔比', unit: '%', min: 0, max: 90, digits: 1, h: METRIC_CHART_H },
+  speech_rate_variation: { label: '語速變化', unit: '', min: 0, max: 10, digits: 2, h: METRIC_CHART_H },
+};
+// 3a's small-multiples grid — pitch keeps its own larger chart in the existing panel, these five
+// get the compact grid (see index.html's .metric-grid).
+const GRID_METRIC_KEYS = ['jitter_local', 'shimmer_local', 'hnr', 'pause_ratio', 'speech_rate_variation'];
+
+function buildMetricPath(pts, w, h, min, max) {
+  const toY = (v) => {
+    const clamped = Math.min(max, Math.max(min, v));
+    return h - ((clamped - min) / (max - min)) * h;
   };
+  if (pts.length === 0) return { line: `M0,${h} L${w},${h}`, area: `M0,${h} L${w},${h} Z`, endX: w, endY: h, toY };
+  const step = pts.length > 1 ? w / (pts.length - 1) : 0;
   let line = `M0,${toY(pts[0])}`;
   pts.forEach((v, i) => { if (i > 0) line += ` L${i * step},${toY(v)}`; });
-  return { line, area: line + ` L${w},${h} L0,${h} Z`, endX: pts.length > 1 ? w : 0, endY: toY(pts[pts.length - 1]) };
+  return { line, area: line + ` L${w},${h} L0,${h} Z`, endX: pts.length > 1 ? w : 0, endY: toY(pts[pts.length - 1]), toY };
 }
 
 // els takes actual DOM elements (not ids) so this also works scoped inside one Test Data card
 // via card.querySelector(), where there can be several cards' worth of charts on the page at
-// once and a global id lookup wouldn't disambiguate them.
-function makePitchChartRenderer(els) {
+// once and a global id lookup wouldn't disambiguate them. els.endpoint/els.baselineLine are
+// optional (the compact 3a grid charts skip the endpoint dot to stay visually quiet).
+function makeMetricChartRenderer(els, { min, max, h }) {
   let points = [];
+  let baselineVal = null;
   function render() {
-    const { line, area, endX, endY } = buildPitchPath(points, 400, PITCH_CHART_H);
+    const { line, area, endX, endY, toY } = buildMetricPath(points, 400, h, min, max);
     els.area.setAttribute('d', area);
     els.line.setAttribute('d', line);
-    els.endpoint.setAttribute('cx', endX);
-    els.endpoint.setAttribute('cy', endY);
+    if (els.endpoint) {
+      els.endpoint.setAttribute('cx', endX);
+      els.endpoint.setAttribute('cy', endY);
+    }
+    if (els.baselineLine) {
+      els.baselineLine.setAttribute('d', baselineVal == null ? '' : `M0,${toY(baselineVal)} L400,${toY(baselineVal)}`);
+    }
   }
   return {
-    push(hz) {
-      if (hz == null) return; // no voiced segment in this chunk — see chunk_worker.py's _compact_acoustic
-      points.push(hz);
+    push(v) {
+      if (v == null) return; // e.g. no voiced segment in this chunk — see chunk_worker.py's _compact_acoustic
+      points.push(v);
       if (points.length > MAX_CHART_POINTS) points.shift();
+      render();
+    },
+    setBaseline(v) {
+      baselineVal = v == null ? null : v;
       render();
     },
     reset() {
       points = [];
+      baselineVal = null;
       render();
+    },
+    values() {
+      return points;
     },
   };
 }
@@ -175,11 +205,197 @@ function pitchChartEls(prefix) {
     area: document.getElementById(prefix + 'PitchArea'),
     line: document.getElementById(prefix + 'PitchLine'),
     endpoint: document.getElementById(prefix + 'PitchEndpoint'),
+    baselineLine: document.getElementById(prefix + 'PitchBaseline'),
   };
+}
+
+// camelCase DOM-id suffix for a snake_case metric key, e.g. "pause_ratio" -> "PauseRatio".
+function metricIdSuffix(key) {
+  return key.split('_').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+}
+
+function metricChartEls(prefix, key) {
+  const suf = metricIdSuffix(key);
+  return {
+    area: document.getElementById(prefix + suf + 'Area'),
+    line: document.getElementById(prefix + suf + 'Line'),
+    baselineLine: document.getElementById(prefix + suf + 'Baseline'),
+  };
+}
+
+function metricChartElsScoped(card, key) {
+  const kebab = key.replace(/_/g, '-');
+  return {
+    area: card.querySelector(`.test-clip-${kebab}-area`),
+    line: card.querySelector(`.test-clip-${kebab}-line`),
+    baselineLine: card.querySelector(`.test-clip-${kebab}-baseline`),
+  };
+}
+
+// Builds one renderer per GRID_METRIC_KEYS entry (+ pitch, handled separately by the caller
+// since it lives in a different-sized chart) — shared shape used by createStreamingView.
+function makeGridChartRenderers(elsForKey) {
+  const renderers = {};
+  GRID_METRIC_KEYS.forEach((key) => {
+    const def = METRIC_DEFS[key];
+    renderers[key] = makeMetricChartRenderer(elsForKey(key), { min: def.min, max: def.max, h: def.h });
+  });
+  return renderers;
+}
+
+// ---- 3b: baseline readout ----
+function formatBaselineReadout(baseline) {
+  if (!baseline) return '尚未建立基準值（通話開頭 15 秒後自動建立）。';
+  return (
+    `此通話基準：音高 ${baseline.mean_pitch.toFixed(0)}Hz · jitter ${baseline.jitter_local.toFixed(2)}% · ` +
+    `shimmer ${baseline.shimmer_local.toFixed(2)}% · HNR ${baseline.hnr.toFixed(1)}dB · ` +
+    `停頓 ${baseline.pause_ratio.toFixed(1)}% · 語速變化 ${baseline.speech_rate_variation.toFixed(2)}`
+  );
+}
+
+function formatBaselineDelta(current, baseline) {
+  if (!baseline || current.mean_pitch == null || !baseline.mean_pitch) return '';
+  const pct = ((current.mean_pitch - baseline.mean_pitch) / baseline.mean_pitch) * 100;
+  const sign = pct >= 0 ? '+' : '';
+  return ` · 音高較基準 ${sign}${pct.toFixed(0)}%`;
+}
+
+// ---- 3c: 8-dim acoustic "deception profile" radar — visualization only, see index.html's
+// .radar-disclaimer text. Each axis maps 1:1 to a single already-streamed acoustic metric (no
+// combining multiple indicators into one axis — that's the shape of antifraud_v2's
+// normalization bug, see docs/DESIGN.md §1). Computed entirely client-side from data already
+// pushed to this view; never touches pipeline/reasoning code, so it cannot leak into risk
+// scoring the way the old system did.
+const RADAR_AXES = [
+  { key: 'pitch_instability', invert: false },
+  { key: 'shimmer_local', invert: false },
+  { key: 'mean_pitch', invert: false },
+  { key: 'hnr', invert: true }, // lower HNR = more of this indicator
+  { key: 'speech_rate_variation', invert: false },
+  { key: 'pause_ratio', invert: false },
+  { key: 'mean_volume', invert: false },
+  { key: 'jitter_local', invert: false },
+];
+
+// z = (current - this call's own opening baseline) / (std dev of this metric's values seen so
+// far in this call), clamped to [-3,+3] and rescaled to [0,100] — 50 means "same as this call's
+// baseline". Self-referential to THIS call's own data only, not v2's external fixed thresholds.
+function zScoreTo100(current, baselineVal, values, invert) {
+  if (current == null || baselineVal == null || values.length < 2) return 50;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
+  const std = Math.max(Math.sqrt(variance), 1e-6);
+  let z = (current - baselineVal) / std;
+  if (invert) z = -z;
+  z = Math.max(-3, Math.min(3, z));
+  return ((z + 3) / 6) * 100;
+}
+
+function polarPoint(cx, cy, r, angleDeg) {
+  const rad = (Math.PI / 180) * angleDeg;
+  return [cx + r * Math.sin(rad), cy - r * Math.cos(rad)];
+}
+
+function buildRadarPath(values8, cx, cy, maxR) {
+  const n = values8.length;
+  const pts = values8.map((v, i) => polarPoint(cx, cy, (Math.max(0, Math.min(100, v)) / 100) * maxR, i * (360 / n)));
+  return 'M' + pts.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' L') + ' Z';
+}
+
+// history: plain object { metricKey: number[] }, accumulated by createStreamingView.onChunk.
+function makeRadarChartRenderer(shapeEl) {
+  function render(history, baseline) {
+    const values8 = RADAR_AXES.map((axis) => {
+      const vals = history[axis.key] || [];
+      const current = vals.length > 0 ? vals[vals.length - 1] : null;
+      const baselineVal = baseline ? baseline[axis.key] : null;
+      return zScoreTo100(current, baselineVal, vals, axis.invert);
+    });
+    shapeEl.setAttribute('d', buildRadarPath(values8, 110, 118, 85));
+  }
+  return {
+    render,
+    reset() {
+      shapeEl.setAttribute('d', buildRadarPath([50, 50, 50, 50, 50, 50, 50, 50], 110, 118, 85));
+    },
+  };
+}
+
+// ---- HTML generator for the 3a/3b/3c panel shared by live/upload/test-clip screens ----
+// classIdAttr(prefix, useClass, fixedClasses, name) returns a single class="..." attribute
+// (plus id="..." when not useClass) for a bare camelCase element name (e.g. "radarShape",
+// "jitterLocalArea") combined with the element's own fixed CSS class(es) — see classIdAttr below.
+// Returns a single `class="..."` attribute (id-based mode also appends a separate `id="..."`)
+// — MUST stay a single class attribute per element: two class="..." attributes on one tag is
+// invalid HTML, and browsers silently keep only the first, dropping the second (confirmed by a
+// real headless-browser run: this exact bug made every scoped .test-clip-* selector return
+// null, which then threw inside makeMetricChartRenderer's els.area.setAttribute(...)).
+function classIdAttr(prefix, useClass, fixedClasses, name) {
+  if (useClass) {
+    const kebab = name.replace(/([A-Z])/g, '-$1').toLowerCase();
+    return `class="${fixedClasses} test-clip-${kebab}"`;
+  }
+  const id = `${prefix}${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+  return `class="${fixedClasses}" id="${id}"`;
+}
+
+function acousticExtraHTML(prefix, useClass) {
+  const a = (fixedClasses, name) => classIdAttr(prefix, useClass, fixedClasses, name);
+  const metricCells = GRID_METRIC_KEYS.map((key) => {
+    const def = METRIC_DEFS[key];
+    const suf = metricIdSuffix(key);
+    const base = suf.charAt(0).toLowerCase() + suf.slice(1);
+    return `
+    <div class="metric-cell">
+      <div class="metric-cell-label">${def.label}</div>
+      <div class="metric-chart-wrap">
+        <svg viewBox="0 0 400 ${METRIC_CHART_H}" preserveAspectRatio="none">
+          <path ${a('metric-area', base + 'Area')} d="M0,${METRIC_CHART_H} L400,${METRIC_CHART_H} Z"/>
+          <path ${a('metric-line', base + 'Line')} d="M0,${METRIC_CHART_H} L400,${METRIC_CHART_H}"/>
+          <path ${a('baseline-ref', base + 'Baseline')} d=""/>
+        </svg>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="metric-grid">${metricCells}</div>
+    <div ${a('baseline-readout mono', 'baselineReadout')}>尚未建立基準值（通話開頭 15 秒後自動建立）。</div>
+    <div class="radar-wrap">
+      <svg viewBox="-20 -2 260 240">
+        <circle class="radar-grid-ring" cx="110" cy="118" r="21.25"/>
+        <circle class="radar-grid-ring" cx="110" cy="118" r="42.5"/>
+        <circle class="radar-grid-ring" cx="110" cy="118" r="63.75"/>
+        <circle class="radar-grid-ring" cx="110" cy="118" r="85"/>
+        <line class="radar-axis-line" x1="110" y1="118" x2="110" y2="33"/>
+        <line class="radar-axis-line" x1="110" y1="118" x2="170.1" y2="57.9"/>
+        <line class="radar-axis-line" x1="110" y1="118" x2="195" y2="118"/>
+        <line class="radar-axis-line" x1="110" y1="118" x2="170.1" y2="178.1"/>
+        <line class="radar-axis-line" x1="110" y1="118" x2="110" y2="203"/>
+        <line class="radar-axis-line" x1="110" y1="118" x2="49.9" y2="178.1"/>
+        <line class="radar-axis-line" x1="110" y1="118" x2="25" y2="118"/>
+        <line class="radar-axis-line" x1="110" y1="118" x2="49.9" y2="57.9"/>
+        <text class="radar-axis-label" x="110" y="18">攻擊性語氣</text>
+        <text class="radar-axis-label" x="180.7" y="47.3">矛盾衝突</text>
+        <text class="radar-axis-label" x="212" y="121">明確否認</text>
+        <text class="radar-axis-label" x="180.7" y="192">尷尬掩蓋</text>
+        <text class="radar-axis-label" x="110" y="230">警覺避談</text>
+        <text class="radar-axis-label" x="39.3" y="192">猶豫不決</text>
+        <text class="radar-axis-label" x="8" y="121">異常興奮</text>
+        <text class="radar-axis-label" x="39.3" y="47.3">邏輯漏洞</text>
+        <path ${a('radar-shape', 'radarShape')} d="M110,118 L110,118 L110,118 L110,118 L110,118 L110,118 L110,118 L110,118 Z"/>
+      </svg>
+      <div class="radar-disclaimer">聲學特徵剖面（僅供參考，非風險判定）— 與本通話自己的開頭基準值比較</div>
+    </div>`;
 }
 
 // ---- emotion badge + acoustic readout ----
 const EMOTION_LABELS_ZH = { anger: '生氣', boredom: '無聊', disgust: '厭惡', fear: '恐懼', happy: '開心', neutral: '中性', sad: '難過' };
+const FRAUD_TYPE_LABELS_ZH = {
+  investment_fraud: '投資詐騙', phishing_fraud: '網路釣魚詐騙', identity_theft: '身分冒用',
+  lottery_fraud: '中獎摸彩詐騙', banking_fraud: '銀行詐騙', extortion_fraud: '勒索詐騙',
+  customer_service_fraud: '客服詐騙', unclassified: '未分類',
+};
 
 function emotionBadgeClass(label) {
   if (label === 'happy') return 'emo-low';
@@ -191,6 +407,18 @@ function emotionBadgeClass(label) {
 function formatAcousticReadout(a) {
   const pitch = a.mean_pitch != null ? `${a.mean_pitch.toFixed(0)} Hz` : '無足夠有聲段';
   return `音高 ${pitch} · jitter ${a.jitter_local}% · shimmer ${a.shimmer_local}% · HNR ${a.hnr}dB · 停頓 ${a.pause_ratio}%`;
+}
+
+function badgeRowHTML(msg) {
+  const chips = [];
+  if (msg.fraud_type && msg.fraud_type.fraud_type && msg.fraud_type.fraud_type !== 'unclassified') {
+    const label = FRAUD_TYPE_LABELS_ZH[msg.fraud_type.fraud_type] || msg.fraud_type.fraud_type;
+    chips.push(`<span class="info-badge">疑似：${label}（${msg.fraud_type.confidence}）</span>`);
+  }
+  if (msg.audio_quality && msg.audio_quality.narrowband) {
+    chips.push(`<span class="info-badge narrowband">電話頻寬（窄頻）— 聲學細節可信度較低</span>`);
+  }
+  return chips.join('');
 }
 
 // ---- "what did the AI see" transparency ----
@@ -210,16 +438,25 @@ function evidenceHTML(evidence) {
 // Shared by the live screen, the upload-result screen, and each Test Data card — all three now
 // consume the same event vocabulary (chunk_update/alert/final_analysis, see server/ws.py and
 // server/upload.py's stream_pipeline_over_audio), just wired to different DOM elements. els:
-// { transcriptList, pitchChart, acousticReadout, emotionBadge, alertsList?, finalSummary?,
-//   evidence? } — the optional ones don't exist on the live screen (which uses the top alert
-// banner and the settled riskPill/riskNum readout instead).
+// { transcriptList, pitchChart, gridCharts, acousticReadout, emotionBadge, baselineReadout?,
+//   radar?, badgeRow?, alertsList?, finalSummary?, evidence? } — the optional ones don't exist
+// on the live screen (which uses the top alert banner and the settled riskPill/riskNum readout
+// instead).
 function createStreamingView(els) {
   let alerts = [];
+  let baseline = null;
+  const metricHistory = { mean_pitch: [], pitch_instability: [], mean_volume: [] }; // radar-only trackers
   return {
     reset() {
       alerts = [];
+      baseline = null;
+      Object.keys(metricHistory).forEach((k) => { metricHistory[k] = []; });
       els.transcriptList.innerHTML = '';
       els.pitchChart.reset();
+      if (els.gridCharts) Object.values(els.gridCharts).forEach((c) => c.reset());
+      if (els.baselineReadout) els.baselineReadout.textContent = formatBaselineReadout(null);
+      if (els.radar) els.radar.reset();
+      if (els.badgeRow) els.badgeRow.innerHTML = '';
       els.acousticReadout.textContent = '尚未偵測到聲音。';
       els.emotionBadge.textContent = '尚無資料';
       els.emotionBadge.className = 'emo-badge emo-neutral';
@@ -231,8 +468,30 @@ function createStreamingView(els) {
       const row = appendTranscriptRowInto(els.transcriptList, msg, false);
       if (els.autoScroll) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       if (msg.acoustic) {
-        els.pitchChart.push(msg.acoustic.mean_pitch);
-        els.acousticReadout.textContent = formatAcousticReadout(msg.acoustic);
+        const a = msg.acoustic;
+        els.pitchChart.push(a.mean_pitch);
+        if (els.gridCharts) GRID_METRIC_KEYS.forEach((key) => els.gridCharts[key].push(a[key]));
+        els.acousticReadout.textContent = formatAcousticReadout(a) + formatBaselineDelta(a, baseline);
+        if (a.mean_pitch != null) metricHistory.mean_pitch.push(a.mean_pitch);
+        if (a.pitch_instability != null) metricHistory.pitch_instability.push(a.pitch_instability);
+        metricHistory.mean_volume.push(a.mean_volume);
+        if (els.radar) {
+          const fullHistory = {
+            ...metricHistory,
+            jitter_local: els.gridCharts ? els.gridCharts.jitter_local.values() : [],
+            shimmer_local: els.gridCharts ? els.gridCharts.shimmer_local.values() : [],
+            hnr: els.gridCharts ? els.gridCharts.hnr.values() : [],
+            pause_ratio: els.gridCharts ? els.gridCharts.pause_ratio.values() : [],
+            speech_rate_variation: els.gridCharts ? els.gridCharts.speech_rate_variation.values() : [],
+          };
+          els.radar.render(fullHistory, baseline);
+        }
+      }
+      if (msg.baseline) {
+        baseline = msg.baseline;
+        els.pitchChart.setBaseline(baseline.mean_pitch);
+        if (els.gridCharts) GRID_METRIC_KEYS.forEach((key) => els.gridCharts[key].setBaseline(baseline[key]));
+        if (els.baselineReadout) els.baselineReadout.textContent = formatBaselineReadout(baseline);
       }
       if (msg.emotion) {
         els.emotionBadge.textContent = `${EMOTION_LABELS_ZH[msg.emotion.label] || msg.emotion.label} ${msg.emotion.top_prob}`;
@@ -249,6 +508,7 @@ function createStreamingView(els) {
       if (els.finalSummary) {
         els.finalSummary.textContent = `${RISK_LABELS[msg.risk_level] || msg.risk_level} — ${msg.justification || ''}`;
       }
+      if (els.badgeRow) els.badgeRow.innerHTML = badgeRowHTML(msg);
       if (els.evidence && msg.evidence) els.evidence.innerHTML = evidenceHTML(msg.evidence);
     },
     getAlerts() {
@@ -413,11 +673,18 @@ function hideSystemMessage() {
 // shared streaming view controller (see createStreamingView above). finalSummary/evidence
 // point at the "最終研判" panel's text + collapsible; there's no alertsList here — the live
 // screen uses the top alert-banner (showAlert) instead of a list panel.
+document.getElementById('liveAcousticExtra').innerHTML = acousticExtraHTML('live', false);
+document.getElementById('uploadAcousticExtra').innerHTML = acousticExtraHTML('upload', false);
+
 const liveView = createStreamingView({
   transcriptList: document.getElementById('transcriptList'),
-  pitchChart: makePitchChartRenderer(pitchChartEls('live')),
+  pitchChart: makeMetricChartRenderer(pitchChartEls('live'), { min: METRIC_DEFS.mean_pitch.min, max: METRIC_DEFS.mean_pitch.max, h: PITCH_CHART_H }),
+  gridCharts: makeGridChartRenderers((key) => metricChartEls('live', key)),
   acousticReadout: document.getElementById('liveAcousticReadout'),
   emotionBadge: document.getElementById('liveEmotionBadge'),
+  baselineReadout: document.getElementById('liveBaselineReadout'),
+  radar: makeRadarChartRenderer(document.getElementById('liveRadarShape')),
+  badgeRow: document.getElementById('liveBadgeRow'),
   finalSummary: document.getElementById('finalJustification'),
   evidence: document.getElementById('liveEvidence'),
   autoScroll: true,
@@ -718,12 +985,182 @@ effortRow.querySelectorAll('.effort-opt').forEach((opt) =>
   })
 );
 
+// ---- 3d: waveform + spectrogram (upload-analysis and test-data screens only; static,
+// one-shot render after the whole file is decoded — not real-time/streaming, per the plan's
+// priority call). Self-contained (no new library): a small iterative radix-2 Cooley-Tukey FFT
+// for the spectrogram, matching this project's existing "no new framework" convention.
+async function decodeAudioFile(arrayBuffer) {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new Ctx();
+  try {
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    return { samples: audioBuffer.getChannelData(0), sampleRate: audioBuffer.sampleRate };
+  } finally {
+    ctx.close();
+  }
+}
+
+function drawWaveform(canvas, samples) {
+  const w = (canvas.width = Math.max(1, Math.floor(canvas.clientWidth || 400)));
+  const h = (canvas.height = 80);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+  if (samples.length === 0) return;
+  const mid = h / 2;
+  const samplesPerPixel = Math.max(1, Math.floor(samples.length / w));
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2F8F86';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = 0; x < w; x++) {
+    const start = x * samplesPerPixel;
+    if (start >= samples.length) break;
+    const end = Math.min(samples.length, start + samplesPerPixel);
+    let min = 1;
+    let max = -1;
+    for (let i = start; i < end; i++) {
+      const v = samples[i];
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    ctx.moveTo(x + 0.5, mid + min * mid);
+    ctx.lineTo(x + 0.5, mid + max * mid);
+  }
+  ctx.stroke();
+}
+
+// In-place iterative radix-2 Cooley-Tukey — `real`/`imag` length must be a power of 2.
+function fftInPlace(real, imag) {
+  const n = real.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      [real[i], real[j]] = [real[j], real[i]];
+      [imag[i], imag[j]] = [imag[j], imag[i]];
+    }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = (-2 * Math.PI) / len;
+    const wr0 = Math.cos(ang);
+    const wi0 = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let curWr = 1;
+      let curWi = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const ur = real[i + k];
+        const ui = imag[i + k];
+        const vr = real[i + k + len / 2] * curWr - imag[i + k + len / 2] * curWi;
+        const vi = real[i + k + len / 2] * curWi + imag[i + k + len / 2] * curWr;
+        real[i + k] = ur + vr;
+        imag[i + k] = ui + vi;
+        real[i + k + len / 2] = ur - vr;
+        imag[i + k + len / 2] = ui - vi;
+        const nwr = curWr * wr0 - curWi * wi0;
+        const nwi = curWr * wi0 + curWi * wr0;
+        curWr = nwr;
+        curWi = nwi;
+      }
+    }
+  }
+}
+
+const SPECTROGRAM_FFT_SIZE = 1024;
+const SPECTROGRAM_HOP = 256;
+
+function computeSpectrogram(samples) {
+  const n = SPECTROGRAM_FFT_SIZE;
+  const window = new Float32Array(n);
+  for (let i = 0; i < n; i++) window[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (n - 1)); // Hann
+  const frames = [];
+  for (let start = 0; start + n <= samples.length; start += SPECTROGRAM_HOP) {
+    const real = new Float32Array(n);
+    const imag = new Float32Array(n);
+    for (let i = 0; i < n; i++) real[i] = samples[start + i] * window[i];
+    fftInPlace(real, imag);
+    const half = n / 2;
+    const mags = new Float32Array(half);
+    for (let i = 0; i < half; i++) mags[i] = 20 * Math.log10(Math.sqrt(real[i] * real[i] + imag[i] * imag[i]) + 1e-6);
+    frames.push(mags);
+  }
+  return frames;
+}
+
+// Three-stop gradient (dark -> teal accent -> warm high-magnitude) — a fixed palette rather
+// than reading CSS custom properties per-pixel, since canvas pixel colors don't need to react
+// to a live theme toggle for a static, one-shot render.
+function magnitudeToColorRGB(t) {
+  const clamped = Math.max(0, Math.min(1, t));
+  const stops = [
+    [10, 20, 19],
+    [47, 143, 134],
+    [226, 86, 76],
+  ];
+  const seg = clamped < 0.5 ? 0 : 1;
+  const localT = clamped < 0.5 ? clamped / 0.5 : (clamped - 0.5) / 0.5;
+  const a = stops[seg];
+  const b = stops[seg + 1];
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * localT),
+    Math.round(a[1] + (b[1] - a[1]) * localT),
+    Math.round(a[2] + (b[2] - a[2]) * localT),
+  ];
+}
+
+function drawSpectrogram(canvas, frames) {
+  const w = (canvas.width = Math.max(1, Math.floor(canvas.clientWidth || 400)));
+  const h = (canvas.height = 110);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+  if (frames.length === 0) return;
+  const numBins = frames[0].length;
+  let minDb = Infinity;
+  let maxDb = -Infinity;
+  for (const f of frames) {
+    for (const v of f) {
+      if (v < minDb) minDb = v;
+      if (v > maxDb) maxDb = v;
+    }
+  }
+  const range = Math.max(maxDb - minDb, 1e-6);
+  const img = ctx.createImageData(w, h);
+  for (let x = 0; x < w; x++) {
+    const frameIdx = Math.min(frames.length - 1, Math.floor((x / w) * frames.length));
+    const frame = frames[frameIdx];
+    for (let y = 0; y < h; y++) {
+      const binIdx = Math.min(numBins - 1, Math.floor(((h - 1 - y) / h) * numBins));
+      const t = (frame[binIdx] - minDb) / range;
+      const [r, g, b] = magnitudeToColorRGB(t);
+      const idx = (y * w + x) * 4;
+      img.data[idx] = r;
+      img.data[idx + 1] = g;
+      img.data[idx + 2] = b;
+      img.data[idx + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+async function renderWaveformAndSpectrogram(arrayBuffer, waveformCanvas, spectrogramCanvas) {
+  try {
+    const { samples } = await decodeAudioFile(arrayBuffer);
+    drawWaveform(waveformCanvas, samples);
+    drawSpectrogram(spectrogramCanvas, computeSpectrogram(samples));
+  } catch (err) {
+    console.error('Failed to render waveform/spectrogram', err);
+  }
+}
+
 // ---- upload analysis (server/upload.py: POST /api/upload-call, streamed NDJSON) ----
 const uploadView = createStreamingView({
   transcriptList: document.getElementById('uploadTranscriptList'),
-  pitchChart: makePitchChartRenderer(pitchChartEls('upload')),
+  pitchChart: makeMetricChartRenderer(pitchChartEls('upload'), { min: METRIC_DEFS.mean_pitch.min, max: METRIC_DEFS.mean_pitch.max, h: PITCH_CHART_H }),
+  gridCharts: makeGridChartRenderers((key) => metricChartEls('upload', key)),
   acousticReadout: document.getElementById('uploadAcousticReadout'),
   emotionBadge: document.getElementById('uploadEmotionBadge'),
+  baselineReadout: document.getElementById('uploadBaselineReadout'),
+  radar: makeRadarChartRenderer(document.getElementById('uploadRadarShape')),
+  badgeRow: document.getElementById('uploadBadgeRow'),
   alertsList: document.getElementById('uploadAlertsList'),
   finalSummary: document.getElementById('uploadSummary'),
   evidence: document.getElementById('uploadEvidence'),
@@ -747,6 +1184,10 @@ async function analyzeUpload() {
   uploadView.reset();
   uploadChart.reset();
   document.getElementById('uploadResult').style.display = 'block'; // shown immediately — chunk_update events fill it in progressively
+
+  file.arrayBuffer().then((buf) =>
+    renderWaveformAndSpectrogram(buf, document.getElementById('uploadWaveform'), document.getElementById('uploadSpectrogram'))
+  );
 
   const form = new FormData();
   form.append('file', file);
@@ -804,8 +1245,11 @@ function testClipCardHTML(category, filename) {
       <button class="btn-toggle-listen test-clip-run">執行分析</button>
     </div>
     <audio controls src="/api/test-clips/${category}/${filename}/audio"></audio>
+    <canvas class="waveform-canvas test-clip-waveform"></canvas>
+    <canvas class="spectrogram-canvas test-clip-spectrogram"></canvas>
     <div class="test-clip-result" style="display:none;">
       <div class="field-help mono test-clip-summary"></div>
+      <div class="badge-row test-clip-badge-row"></div>
       <div class="panel-head" style="margin-top:10px; margin-bottom:6px;">
         <div class="panel-title" style="font-size:11px;">聲學／情緒</div>
         <span class="emo-badge emo-neutral test-clip-emotion-badge">尚無資料</span>
@@ -814,10 +1258,12 @@ function testClipCardHTML(category, filename) {
         <svg viewBox="0 0 400 56" preserveAspectRatio="none">
           <path class="pitch-area test-clip-pitch-area" d="M0,56 L400,56 Z"/>
           <path class="pitch-line test-clip-pitch-line" d="M0,56 L400,56"/>
+          <path class="baseline-ref test-clip-pitch-baseline" d=""/>
           <circle class="chart-endpoint test-clip-pitch-endpoint" style="fill:var(--accent)" cx="0" cy="56" r="3"/>
         </svg>
       </div>
       <div class="field-help mono test-clip-acoustic-readout">尚未偵測到聲音。</div>
+      ${acousticExtraHTML('', true)}
       <div class="field-help mono test-clip-final-summary" style="margin-top:6px;"></div>
       <div class="test-clip-evidence"></div>
       <div class="test-clip-alerts" style="margin-top:10px;"></div>
@@ -833,13 +1279,21 @@ function testClipCardHTML(category, filename) {
 function createTestClipView(card) {
   return createStreamingView({
     transcriptList: card.querySelector('.test-clip-transcript'),
-    pitchChart: makePitchChartRenderer({
-      area: card.querySelector('.test-clip-pitch-area'),
-      line: card.querySelector('.test-clip-pitch-line'),
-      endpoint: card.querySelector('.test-clip-pitch-endpoint'),
-    }),
+    pitchChart: makeMetricChartRenderer(
+      {
+        area: card.querySelector('.test-clip-pitch-area'),
+        line: card.querySelector('.test-clip-pitch-line'),
+        endpoint: card.querySelector('.test-clip-pitch-endpoint'),
+        baselineLine: card.querySelector('.test-clip-pitch-baseline'),
+      },
+      { min: METRIC_DEFS.mean_pitch.min, max: METRIC_DEFS.mean_pitch.max, h: PITCH_CHART_H }
+    ),
+    gridCharts: makeGridChartRenderers((key) => metricChartElsScoped(card, key)),
     acousticReadout: card.querySelector('.test-clip-acoustic-readout'),
     emotionBadge: card.querySelector('.test-clip-emotion-badge'),
+    baselineReadout: card.querySelector('.test-clip-baseline-readout'),
+    radar: makeRadarChartRenderer(card.querySelector('.test-clip-radar-shape')),
+    badgeRow: card.querySelector('.test-clip-badge-row'),
     alertsList: card.querySelector('.test-clip-alerts'),
     finalSummary: card.querySelector('.test-clip-final-summary'),
     evidence: card.querySelector('.test-clip-evidence'),
@@ -883,6 +1337,13 @@ async function runTestClip(card) {
   const view = createTestClipView(card);
   view.reset();
   resultEl.style.display = 'block'; // shown immediately — chunk_update events fill it in progressively
+
+  fetch(`/api/test-clips/${category}/${filename}/audio`)
+    .then((r) => r.arrayBuffer())
+    .then((buf) =>
+      renderWaveformAndSpectrogram(buf, card.querySelector('.test-clip-waveform'), card.querySelector('.test-clip-spectrogram'))
+    )
+    .catch((err) => console.error('Failed to load test clip audio for waveform/spectrogram', err));
 
   try {
     const res = await fetch(`/api/test-clips/${category}/${filename}/analyze`, { method: 'POST' });

@@ -23,3 +23,24 @@ TeleAntiFraud-28k 有 28,511 筆經過標註驗證的真實/合成混合資料�
 資料集驗證的手動門檻規則。若本專案未來想認真降低誤報率，這是一個具體可參考的方向：先建立（或採用）
 一個像 TeleAntiFraud-28k 這樣有標註的中文電信詐騙語料，才有辦法真正校準/訓練/評測現有的規則式
 判斷邏輯，而不是繼續依賴手動調整的魔術數字門檻。
+
+## 資料集細節（供實際採用時參考）
+
+- **語言**：原生中文（Mandarin），不需要跨語言翻譯這一關——這點跟本專案介面/語料都是繁體中文一致，
+  是目前 `references/` 裡少數原生中文的資料集參考。
+- **授權**：程式碼倉庫（`github.com/JimmyMa99/TeleAntiFraud`）為 Apache License 2.0，允許商用、
+  需保留授權聲明；資料集本身另外託管於 Hugging Face（`JimmyMa99/TeleAntiFraud`）與 ModelScope，
+  實際採用前應個別確認資料集頁面上的授權條款，不能只看程式碼倉庫的 LICENSE。
+- **音訊品質——重要限制**：音訊是用 ChatTTS 從匿名化後的 ASR 逐字稿重新合成，屬於**乾淨、寬頻
+  （clean/wideband）合成語音**，並未模擬真實電話頻寬（300–3400Hz band-limited）或電信編碼失真。
+  **不適合用來驗證/校準本專案窄頻電話錄音的聲學處理**（見 `antifraud_v3/audio/quality.py` 的
+  `detect_bandwidth`）；它的價值在文字/情境內容與分類任務設計，不在聲學真實度。
+- **雙軌設計**：caller／callee 分為兩條獨立音軌，這點是本專案目前完全沒有的能力（無語者分離／
+  diarization，見 `docs/DESIGN.md` 已知缺口），可作為未來若要做語者分離時的架構參考，但本身不是
+  可以直接搬過來用的元件。
+- **詐騙類型分類法（7 類）**：Investment Fraud（投資詐騙）、Phishing Fraud（網路釣魚詐騙）、
+  Identity Theft（身分冒用）、Lottery Fraud（中獎摸彩詐騙）、Banking Fraud（銀行詐騙）、
+  Extortion Fraud（勒索詐騙）、Customer Service Fraud（客服詐騙）。這是一套「詐騙話術屬於哪種
+  類型」的分類，跟 `antifraud_v3` 現有的 4 階段 kill-chain（接觸→催促→隔絕→取款，判斷「詐騙進行
+  到哪個階段」）是兩個不同維度，互補不衝突——已採用為 `reasoning/schemas.py` 的
+  `FraudTypeClassification` 分類法依據。

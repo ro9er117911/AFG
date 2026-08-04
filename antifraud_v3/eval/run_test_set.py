@@ -9,6 +9,10 @@ calm/neutral tone, a naturally slow talker, mild unrelated annoyance, lots of na
 This treats each clip as a single chunk for simplicity — real calls go through VADChunker
 first (audio/vad.py); for a short scripted test clip that's usually one utterance anyway.
 
+All current clips are edge-tts-synthesized wideband speech, not real telephone-quality
+(narrowband) audio — see ../docs/TEST_DATA_ACQUISITION.md for how to source real
+telephone-bandwidth recordings to test audio/quality.py's detect_bandwidth() against.
+
 Usage: python -m antifraud_v3.eval.run_test_set
 """
 

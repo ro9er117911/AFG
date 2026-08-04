@@ -7,6 +7,7 @@ import sqlite3
 from antifraud_v3.pipeline.call_state import CallState
 from antifraud_v3.reasoning.schemas import SynthesizeResult
 from antifraud_v3.storage import history
+from antifraud_v3.tests.conftest import DEFAULT_FRAUD_TYPE
 
 
 def make_result(risk_level="low"):
@@ -16,6 +17,7 @@ def make_result(risk_level="low"):
         hard_triggers=[],
         justification="j",
         case_memory_update="",
+        fraud_type=DEFAULT_FRAUD_TYPE,
     )
 
 

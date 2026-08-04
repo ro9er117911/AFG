@@ -141,6 +141,7 @@ async def _handle_chunk(
                 "transcript_text": result.transcript_text,
                 "acoustic": result.acoustic,
                 "emotion": result.emotion,
+                "baseline": result.baseline,
             },
             ensure_ascii=False,
         )
@@ -185,6 +186,8 @@ async def _run_and_send_final_analysis(
                 "risk_level": result.risk_level,
                 "chunk_risk_score": result.chunk_risk_score,
                 "justification": result.justification,
+                "fraud_type": result.fraud_type.model_dump(),
+                "audio_quality": call_state.audio_quality,  # always None for live mic calls
                 "evidence": {
                     "transcript_segment": evidence.transcript_segment,
                     "acoustic_summary": evidence.acoustic_summary,

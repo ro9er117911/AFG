@@ -156,6 +156,11 @@ DB／設定檔路徑，不會碰到真正的 API 額度或 `antifraud_v3/data/` 
 - 上傳分析目前只吃 `soundfile`（libsndfile）能直接解碼的格式（wav/flac/ogg）——手機錄音常見的
   m4a/mp3 需要先用 ffmpeg 轉檔，見 `server/upload.py` 的錯誤訊息。
 
+**上傳電話品質（窄頻）錄音**：`server/upload.py` 的 `_decode_audio` 會用 `audio/quality.py` 的
+`detect_bandwidth()` 判斷上傳的錄音是不是真實電話線路的窄頻音訊，如果是，最終 LLM 分析會多加一句
+「聲學細節可信度較低」的提示。怎麼零成本取得真實電話品質測試錄音（不需要 Android 手機），見
+`antifraud_v3/docs/TEST_DATA_ACQUISITION.md`。
+
 ## 文獻
 
 `references/` 收錄了 10 篇支撐這次重寫設計決策的文獻（2023–2026，含 DOI/連結），涵蓋 TIMNet 原始

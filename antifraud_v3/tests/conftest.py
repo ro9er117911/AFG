@@ -22,9 +22,12 @@ if str(REPO_ROOT) not in sys.path:
 from antifraud_v3.llm.base import LLMProvider  # noqa: E402
 from antifraud_v3.reasoning.schemas import (  # noqa: E402
     DiscriminateResult,
+    FraudTypeClassification,
     ReflectResult,
     SynthesizeResult,
 )
+
+DEFAULT_FRAUD_TYPE = FraudTypeClassification(fraud_type="unclassified", confidence="none", justification="無明顯詐騙類型敘事。")
 
 
 class FakeLLMProvider(LLMProvider):
@@ -46,6 +49,7 @@ class FakeLLMProvider(LLMProvider):
             hard_triggers=[],
             justification="正常對話，沒有偵測到詐騙跡象。",
             case_memory_update="",
+            fraud_type=DEFAULT_FRAUD_TYPE,
         )
 
     def structured_complete(self, system, user_content, schema):

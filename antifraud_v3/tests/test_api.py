@@ -13,6 +13,7 @@ from antifraud_v3.pipeline.call_state import CallState
 from antifraud_v3.reasoning.schemas import SynthesizeResult
 from antifraud_v3.server.api import router as api_router
 from antifraud_v3.storage import history
+from antifraud_v3.tests.conftest import DEFAULT_FRAUD_TYPE
 
 
 @pytest.fixture
@@ -63,7 +64,7 @@ def test_list_calls_after_finishing_one(client):
     call_id = history.create_call()
     cs = CallState()
     cs.apply_final_result(
-        SynthesizeResult(risk_level="high", chunk_risk_score=90, hard_triggers=[], justification="j", case_memory_update=""),
+        SynthesizeResult(risk_level="high", chunk_risk_score=90, hard_triggers=[], justification="j", case_memory_update="", fraud_type=DEFAULT_FRAUD_TYPE),
     )
     history.finish_call(call_id, cs, ended_reason="stopped")
 
@@ -86,7 +87,7 @@ def test_get_call_detail_returns_transcript_and_trajectory(client):
     features = {"pitch": {"mean_pitch": 0.0, "valid_samples": 0}, "volume": {}, "speech_rate": {}}
     cs.record_chunk_signals("詐騙測試逐字稿", None, features, {})
     cs.apply_final_result(
-        SynthesizeResult(risk_level="medium", chunk_risk_score=50, hard_triggers=[], justification="j", case_memory_update=""),
+        SynthesizeResult(risk_level="medium", chunk_risk_score=50, hard_triggers=[], justification="j", case_memory_update="", fraud_type=DEFAULT_FRAUD_TYPE),
     )
     history.finish_call(call_id, cs, ended_reason="stopped")
 

@@ -24,6 +24,7 @@ import soundfile as sf
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
+from ..audio.quality import detect_bandwidth
 from ..audio.vad import VADChunker
 from ..llm import LLMProvider, LLMProviderError, get_llm_provider
 from ..pipeline.call_state import CallState
@@ -37,16 +38,23 @@ router = APIRouter(prefix="/api")
 SAMPLE_RATE = 16000
 
 
-def _decode_audio(raw: bytes, filename: str) -> np.ndarray:
-    """Decode to float32 mono at SAMPLE_RATE.
+def _decode_audio(raw: bytes, filename: str) -> tuple[np.ndarray, dict]:
+    """Decode to float32 mono at SAMPLE_RATE, and detect whether the source is telephone-quality
+    (narrowband) audio — e.g. a real call recorded via a PSTN/VoIP conferencing bridge, as
+    opposed to wideband mic audio — see audio/quality.py's detect_bandwidth and
+    docs/TEST_DATA_ACQUISITION.md for how to source real telephone-quality test recordings.
 
     soundfile (libsndfile) handles wav/flac/ogg natively, which covers the eval/test_clips
-    convention this project already uses (16kHz mono wav, see eval/run_test_set.py). Browser
-    recordings are often webm/mp4/mp3, which libsndfile can't read — rather than silently
-    failing deep in sf.read with a cryptic error, or adding an ffmpeg subprocess dependency
-    that may not exist on every deployment target, this raises a clear 400 telling the user
-    what formats are supported; converting client-side or with ffmpeg before upload is on the
-    user, documented in README.md's upload section.
+    convention this project already uses (16kHz mono wav, see eval/run_test_set.py) and the
+    formats free conferencing bridges typically export (wav/mp3 — mp3 needs a libsndfile build
+    with mp3 support, otherwise convert first). Browser recordings are often webm/mp4, which
+    libsndfile can't read — rather than silently failing deep in sf.read with a cryptic error,
+    or adding an ffmpeg subprocess dependency that may not exist on every deployment target,
+    this raises a clear 400 telling the user what formats are supported; converting client-side
+    or with ffmpeg before upload is on the user, documented in README.md's upload section.
+
+    Returns (y, quality) where quality is detect_bandwidth()'s dict, computed on the audio
+    *before* resampling so the spectral check sees the real recorded bandwidth.
     """
     try:
         y, sr = sf.read(io.BytesIO(raw), dtype="float32", always_2d=False)
@@ -55,18 +63,19 @@ def _decode_audio(raw: bytes, filename: str) -> np.ndarray:
             status_code=400,
             detail=(
                 f"無法解析音訊檔案「{filename}」：{e}。"
-                "請上傳 wav/flac/ogg 格式（16kHz 單聲道效果最好），"
+                "請上傳 wav/flac/ogg 格式（電話品質的窄頻錄音，例如免費會議橋接電話錄音，也支援），"
                 "其他格式（如手機錄音常見的 m4a/mp3）請先用 ffmpeg 轉檔，例如："
                 "ffmpeg -i input.m4a -ar 16000 -ac 1 output.wav"
             ),
         ) from e
     if y.ndim > 1:
         y = y.mean(axis=1)  # downmix to mono, same as eval/run_test_set.py
+    quality = detect_bandwidth(y, sr, native_sr=sr)
     if sr != SAMPLE_RATE:
         import librosa  # lazy import — only needed off the common 16kHz-wav path
 
         y = librosa.resample(y, orig_sr=sr, target_sr=SAMPLE_RATE)
-    return y.astype(np.float32)
+    return y.astype(np.float32), quality
 
 
 async def stream_pipeline_over_audio(
@@ -112,6 +121,7 @@ async def stream_pipeline_over_audio(
             "transcript_text": result.transcript_text,
             "acoustic": result.acoustic,
             "emotion": result.emotion,
+            "baseline": result.baseline,
         }
         if result.alert is not None:
             yield {"type": "alert", **dataclasses.asdict(result.alert)}
@@ -128,6 +138,8 @@ async def stream_pipeline_over_audio(
         "risk_level": result.risk_level,
         "chunk_risk_score": result.chunk_risk_score,
         "justification": result.justification,
+        "fraud_type": result.fraud_type.model_dump(),
+        "audio_quality": call_state.audio_quality,
         "evidence": {
             "transcript_segment": evidence.transcript_segment,
             "acoustic_summary": evidence.acoustic_summary,
@@ -156,7 +168,7 @@ async def upload_call(file: UploadFile = File(...)):
     raw = await file.read()
     if not raw:
         raise HTTPException(status_code=400, detail="上傳的檔案是空的")
-    y = _decode_audio(raw, file.filename or "upload")
+    y, quality = _decode_audio(raw, file.filename or "upload")
 
     settings = load_settings()
     try:
@@ -165,6 +177,7 @@ async def upload_call(file: UploadFile = File(...)):
         raise HTTPException(status_code=502, detail=str(e)) from e
 
     call_state = CallState()
+    call_state.audio_quality = quality
     call_id = history.create_call(source="upload")
     duration_seconds = len(y) / SAMPLE_RATE
 

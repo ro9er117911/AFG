@@ -16,7 +16,7 @@ from antifraud_v3.reasoning.schemas import (
     StageEvidence,
     SynthesizeResult,
 )
-from antifraud_v3.tests.conftest import FakeLLMProvider
+from antifraud_v3.tests.conftest import DEFAULT_FRAUD_TYPE, FakeLLMProvider
 
 
 def make_evidence(text="測試逐字稿"):
@@ -93,6 +93,7 @@ def test_run_reasoning_pipeline_chains_all_three_steps_in_order():
             hard_triggers=[],
             justification="要求提供驗證碼",
             case_memory_update="已要求驗證碼一次",
+            fraud_type=DEFAULT_FRAUD_TYPE,
         )
     )
     result = run_reasoning_pipeline(provider, make_evidence("請提供簡訊驗證碼"), hard_triggers=DEFAULT_HARD_TRIGGERS)
@@ -108,7 +109,12 @@ def test_run_reasoning_pipeline_low_risk_path_still_calls_all_steps():
     # hard triggers independently of stage evidence.
     fake = FakeLLMProvider(
         synthesize_result=SynthesizeResult(
-            risk_level="low", chunk_risk_score=2, hard_triggers=[], justification="正常對話", case_memory_update=""
+            risk_level="low",
+            chunk_risk_score=2,
+            hard_triggers=[],
+            justification="正常對話",
+            case_memory_update="",
+            fraud_type=DEFAULT_FRAUD_TYPE,
         )
     )
     result = run_reasoning_pipeline(fake, make_evidence("我們晚上要不要一起吃飯"))

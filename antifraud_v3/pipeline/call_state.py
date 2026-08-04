@@ -39,6 +39,10 @@ class RiskPoint:
     risk_level: str
     chunk_risk_score: int
     justification: str
+    # Independent of risk_level/chunk_risk_score — "what kind of scam does this look like"
+    # (TeleAntiFraud-28k's 7-category taxonomy, see reasoning/rubric.py's FRAUD_TYPE_TAXONOMY),
+    # not a risk judgment. None for calls analyzed before this field existed.
+    fraud_type: dict | None = None
 
 
 @dataclass
@@ -64,23 +68,56 @@ class CallState:
         self.case_memory: str = ""
         self.alert_state: str = "none"  # none -> alert_issued -> resolved (-> re-armable)
         self.baseline: dict | None = None
+        # Set once, immediately after construction, by upload/testdata callers that already know
+        # it at decode time (see audio/quality.py) — never set for live mic calls (server/ws.py),
+        # which are always 16kHz wideband by construction.
+        self.audio_quality: dict | None = None
 
     def elapsed_seconds(self) -> float:
         return time.monotonic() - self._started_at
 
-    def maybe_set_baseline(self, acoustic_features: dict) -> None:
+    def maybe_set_baseline(self, acoustic_features: dict, timestamp: float | None = None) -> bool:
         """Establish a real within-call baseline once ~15s of the call have elapsed — the one
         place this rewrite can legitimately fix the self-referential-baseline issue the
         antifraud_v2 bug-fix pass explicitly declined to touch (there was no earlier segment
         of the same call to compare against in a whole-call batch analysis; here there is).
+
+        timestamp overrides the default wall-clock elapsed_seconds() reading — same reasoning
+        as record_chunk_signals()'s timestamp parameter: for batch/upload analysis
+        (server/upload.py), ASR/acoustic/emotion processing runs far faster than real-time, so
+        wall-clock elapsed time since this CallState was constructed reaches 15s almost
+        immediately regardless of how far into the *recording* those 15s of audio actually are
+        — confirmed by a real end-to-end run where a 23s clip's baseline never fired because
+        the whole batch only took ~2s of wall-clock chunk processing. "When this happened"
+        needs to mean position within the audio, not processing wall-clock time, exactly like
+        record_chunk_signals() already does.
+
+        Returns True exactly on the one chunk where the baseline was just established, so
+        callers (pipeline/chunk_worker.py) know which chunk_signals update to attach it to for
+        the frontend, instead of silently recomputing/resending it every chunk thereafter.
         """
-        if self.baseline is not None or self.elapsed_seconds() < self.BASELINE_WINDOW_S:
-            return
+        ts = timestamp if timestamp is not None else self.elapsed_seconds()
+        if self.baseline is not None or ts < self.BASELINE_WINDOW_S:
+            return False
+        p, v, t, sr = (
+            acoustic_features["pitch"],
+            acoustic_features["volume"],
+            acoustic_features["tremor"],
+            acoustic_features["speech_rate"],
+        )
         self.baseline = {
-            "mean_pitch": acoustic_features["pitch"]["mean_pitch"],
-            "mean_volume": acoustic_features["volume"]["mean_volume"],
-            "speech_rate_variation": acoustic_features["speech_rate"]["speech_rate_variation"],
+            "mean_pitch": p["mean_pitch"],
+            "std_pitch": p["std_pitch"],
+            "pitch_instability": p["pitch_instability"],
+            "mean_volume": v["mean_volume"],
+            "std_volume": v["std_volume"],
+            "jitter_local": t["jitter_local"],
+            "shimmer_local": t["shimmer_local"],
+            "hnr": t["hnr"],
+            "pause_ratio": sr["pause_ratio"],
+            "speech_rate_variation": sr["speech_rate_variation"],
         }
+        return True
 
     def record_chunk_signals(
         self,
@@ -134,6 +171,7 @@ class CallState:
                 risk_level=result.risk_level,
                 chunk_risk_score=result.chunk_risk_score,
                 justification=result.justification,
+                fraud_type=result.fraud_type.model_dump(),
             )
         )
         self.case_memory = result.case_memory_update

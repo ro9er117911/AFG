@@ -196,6 +196,42 @@
   .pitch-chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
   .pitch-area { fill: var(--accent); opacity: 0.1; }
   .pitch-line { fill: none; stroke: var(--accent); stroke-width: 2; transition: d .3s ease; }
+  .baseline-ref { stroke: var(--ink-faint); stroke-width: 1; stroke-dasharray: 3 3; }
+
+  /* ---- 3a: small multi-metric sparkline grid (jitter/shimmer/HNR/pause/speech-rate) ---- */
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+  .metric-cell { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+  .metric-cell-label { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 4px; }
+  .metric-chart-wrap { position: relative; height: 34px; }
+  .metric-chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
+  .metric-area { fill: var(--accent); opacity: 0.12; }
+  .metric-line { fill: none; stroke: var(--accent); stroke-width: 1.6; transition: d .3s ease; }
+  .metric-cell-val { font-size: 11px; margin-top: 3px; color: var(--ink-soft); }
+
+  /* ---- 3b: baseline readout ---- */
+  .baseline-readout { font-size: 12px; color: var(--ink-faint); margin-top: 8px; line-height: 1.6; }
+
+  /* ---- 3c: 8-dim acoustic profile radar chart — visualization only, see disclaimer text ---- */
+  .radar-wrap { position: relative; }
+  .radar-wrap svg { width: 100%; height: auto; max-width: 320px; display: block; margin: 0 auto; }
+  .radar-grid-ring { fill: none; stroke: var(--border); stroke-width: 1; }
+  .radar-axis-line { stroke: var(--border); stroke-width: 1; }
+  .radar-axis-label { font-size: 9px; fill: var(--ink-faint); text-anchor: middle; }
+  .radar-shape { fill: var(--accent); fill-opacity: 0.18; stroke: var(--accent); stroke-width: 1.6; transition: d .3s ease; }
+  .radar-disclaimer { font-size: 11px; color: var(--ink-faint); text-align: center; margin-top: 4px; line-height: 1.5; }
+
+  /* ---- 3d: waveform + spectrogram (upload / test-data only) ---- */
+  .waveform-canvas, .spectrogram-canvas { width: 100%; height: 80px; display: block; border-radius: 8px; background: var(--surface-2); margin-top: 8px; }
+  .spectrogram-canvas { height: 110px; }
+
+  /* ---- fraud-type + audio-quality badges (shown in 最終研判 panel) ---- */
+  .badge-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .info-badge {
+    display: inline-flex; align-items: center; font-size: 11px; font-weight: 600;
+    padding: 3px 9px; border-radius: 999px; letter-spacing: 0.01em;
+    background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--border);
+  }
+  .info-badge.narrowband { background: var(--risk-medium-soft); color: var(--risk-medium); border-color: transparent; }
 
   .emo-badge {
     display: inline-flex; align-items: center; font-size: 11px; font-weight: 700;
@@ -370,6 +406,7 @@
       <div class="field-help" id="finalJustification" style="margin-top:12px;">
         聲學／語音辨識／情緒分析在通話中即時顯示於下方；完整研判會在「結束監聽」後才跑一次，結果顯示在這裡。
       </div>
+      <div class="badge-row" id="liveBadgeRow"></div>
       <div id="liveEvidence"></div>
     </div>
 
@@ -382,10 +419,12 @@
         <svg viewBox="0 0 400 56" preserveAspectRatio="none">
           <path class="pitch-area" id="livePitchArea" d="M0,56 L400,56 Z"/>
           <path class="pitch-line" id="livePitchLine" d="M0,56 L400,56"/>
+          <path class="baseline-ref" id="livePitchBaseline" d=""/>
           <circle class="chart-endpoint" style="fill:var(--accent)" id="livePitchEndpoint" cx="0" cy="56" r="3"/>
         </svg>
       </div>
       <div class="field-help mono" id="liveAcousticReadout" style="margin-top:8px; margin-bottom:0;">尚未偵測到聲音。</div>
+      <div id="liveAcousticExtra"></div>
     </div>
 
     <div class="panel">
@@ -414,6 +453,12 @@
 
     <div id="uploadResult" style="display:none;">
       <div class="panel">
+        <div class="panel-head"><div class="panel-title">波形與頻譜圖</div></div>
+        <canvas class="waveform-canvas" id="uploadWaveform"></canvas>
+        <canvas class="spectrogram-canvas" id="uploadSpectrogram"></canvas>
+      </div>
+
+      <div class="panel">
         <div class="panel-head">
           <div class="panel-title">聲學／情緒</div>
           <span class="emo-badge emo-neutral" id="uploadEmotionBadge">尚無資料</span>
@@ -422,10 +467,12 @@
           <svg viewBox="0 0 400 56" preserveAspectRatio="none">
             <path class="pitch-area" id="uploadPitchArea" d="M0,56 L400,56 Z"/>
             <path class="pitch-line" id="uploadPitchLine" d="M0,56 L400,56"/>
+            <path class="baseline-ref" id="uploadPitchBaseline" d=""/>
             <circle class="chart-endpoint" style="fill:var(--accent)" id="uploadPitchEndpoint" cx="0" cy="56" r="3"/>
           </svg>
         </div>
         <div class="field-help mono" id="uploadAcousticReadout" style="margin-top:8px; margin-bottom:0;">尚未偵測到聲音。</div>
+        <div id="uploadAcousticExtra"></div>
       </div>
 
       <div class="panel">
@@ -453,6 +500,7 @@
           </svg>
         </div>
         <div class="field-help mono" id="uploadSummary" style="margin-top:10px;"></div>
+        <div class="badge-row" id="uploadBadgeRow"></div>
         <div id="uploadEvidence"></div>
       </div>
 

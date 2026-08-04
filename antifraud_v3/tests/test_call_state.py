@@ -8,6 +8,7 @@ call now.
 
 from antifraud_v3.pipeline.call_state import CallState
 from antifraud_v3.reasoning.schemas import HardTriggerHit, SynthesizeResult
+from antifraud_v3.tests.conftest import DEFAULT_FRAUD_TYPE
 
 
 def make_result(risk_level="low", hard_trigger_fired=False, trigger_name="OTP要求", quote="給我驗證碼"):
@@ -17,6 +18,7 @@ def make_result(risk_level="low", hard_trigger_fired=False, trigger_name="OTP要
         hard_triggers=[
             HardTriggerHit(name=trigger_name, fired=hard_trigger_fired, quote=quote if hard_trigger_fired else None)
         ],
+        fraud_type=DEFAULT_FRAUD_TYPE,
         justification="test justification",
         case_memory_update="test memory",
     )
@@ -172,18 +174,28 @@ def test_baseline_set_after_window_elapses():
     cs = CallState()
     cs._started_at -= CallState.BASELINE_WINDOW_S + 1  # simulate time having passed
     features = {
-        "pitch": {"mean_pitch": 210.0},
-        "volume": {"mean_volume": 0.6},
-        "speech_rate": {"speech_rate_variation": 0.12},
+        "pitch": {"mean_pitch": 210.0, "std_pitch": 5.0, "pitch_instability": 1.2},
+        "volume": {"mean_volume": 0.6, "std_volume": 0.05},
+        "tremor": {"jitter_local": 0.8, "shimmer_local": 2.5, "hnr": 18.0},
+        "speech_rate": {"speech_rate_variation": 0.12, "pause_ratio": 10.0},
     }
     cs.maybe_set_baseline(features)
     assert cs.baseline is not None
     assert cs.baseline["mean_pitch"] == 210.0
 
 
+def _baseline_features(mean_pitch, mean_volume, speech_rate_variation):
+    return {
+        "pitch": {"mean_pitch": mean_pitch, "std_pitch": 5.0, "pitch_instability": 1.2},
+        "volume": {"mean_volume": mean_volume, "std_volume": 0.05},
+        "tremor": {"jitter_local": 0.8, "shimmer_local": 2.5, "hnr": 18.0},
+        "speech_rate": {"speech_rate_variation": speech_rate_variation, "pause_ratio": 10.0},
+    }
+
+
 def test_baseline_only_set_once():
     cs = CallState()
     cs._started_at -= CallState.BASELINE_WINDOW_S + 1
-    cs.maybe_set_baseline({"pitch": {"mean_pitch": 100.0}, "volume": {"mean_volume": 0.1}, "speech_rate": {"speech_rate_variation": 0.0}})
-    cs.maybe_set_baseline({"pitch": {"mean_pitch": 999.0}, "volume": {"mean_volume": 0.9}, "speech_rate": {"speech_rate_variation": 0.9}})
+    cs.maybe_set_baseline(_baseline_features(100.0, 0.1, 0.0))
+    cs.maybe_set_baseline(_baseline_features(999.0, 0.9, 0.9))
     assert cs.baseline["mean_pitch"] == 100.0  # second call should not overwrite

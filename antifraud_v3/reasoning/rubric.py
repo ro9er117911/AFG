@@ -43,6 +43,29 @@ Wu et al. 2018；Ekman 2004）。**平靜、中性的語氣本身不是證據**�
 主張互相印證時才有意義（例如：語氣異常急促 + 文字明確要求立即轉帳，兩者一起看才是證據，各自單獨看都不是）。
 """
 
+# TeleAntiFraud-28k's 7-category fraud-type taxonomy (Ma et al., ACM MM 2025 — see
+# ../../references/05-teleantifraud.md), used for the descriptive fraud_type classification in
+# SynthesizeResult. Independent of SCAM_KILL_CHAIN_RUBRIC above: that rubric asks "which stage
+# of the scam process is this call in", this taxonomy asks "what kind of scam narrative does
+# it resemble" — a call can be risk_level=medium with a clearly-identifiable fraud_type, or
+# risk_level=high with fraud_type=unclassified if the narrative doesn't fit any of the 7.
+FRAUD_TYPE_TAXONOMY = """\
+## 詐騙類型分類（與上面的階段判斷是不同維度，彼此獨立）
+
+- investment_fraud（投資詐騙）：報明牌、保證獲利、虛假投資平台、加密貨幣投資群組等。
+- phishing_fraud（網路釣魚詐騙）：假冒官方連結/簡訊要求點擊、輸入帳密或個資。
+- identity_theft（身分冒用）：冒充公務員、警察、檢察官、親友等身分本身就是核心手法（猜猜我是誰、假冒公務員）。
+- lottery_fraud（中獎摸彩詐騙）：宣稱中獎、抽中贈品，要求先付手續費/稅金才能領取。
+- banking_fraud（銀行詐騙）：冒充銀行客服，聲稱帳戶異常、盜刷、需要「保護帳戶」或「圈存」。
+- extortion_fraud（勒索詐騙）：威脅、假綁架、聲稱涉案要求付款了事。
+- customer_service_fraud（客服詐騙）：冒充網購/物流客服，聲稱訂單有誤、需要退款或重新設定付款方式。
+- unclassified：內容不明顯符合以上任一類型，或資訊不足以判斷。
+
+分類依據**只看逐字稿內容的敘事類型**，跟 risk_level／階段證據強度無關——即使 risk_level 是
+low，只要對話明顯屬於某個類型的敘事就可以標記；反之 risk_level 是 high 也可能因為敘事不清楚
+而歸類為 unclassified。這是描述性的分類，不是風險判斷的一部分，不要讓兩者互相影響彼此的判斷。
+"""
+
 DEFAULT_HARD_TRIGGERS = [
     "要求提供簡訊/OTP 驗證碼",
     "要求「圈存」或「保護帳戶」（常見假保護話術）",
@@ -99,10 +122,13 @@ def build_synthesize_system_prompt(hard_triggers: list[str] | None = None) -> st
     triggers = hard_triggers if hard_triggers is not None else DEFAULT_HARD_TRIGGERS
     trigger_lines = "\n".join(f"- {t}" for t in triggers)
     return f"""你是詐騙偵測系統的「綜合」步驟，根據反思後的階段證據 + 立即示警關鍵字清單，
-產出這通電話唯一一次的最終風險評估（整通電話結束後才跑一次，不是逐句判斷）。
+產出這通電話唯一一次的最終風險評估（整通電話結束後才跑一次，不是逐句判斷），並額外做一個獨立的
+詐騙類型分類。
 
 立即示警關鍵字清單（整通電話中只要出現任一項，即使只有一句話，也可以判定 risk_level=high）：
 {trigger_lines}
+
+{FRAUD_TYPE_TAXONOMY}
 
 risk_level 的判斷：
 - high：命中任一立即示警關鍵字，或多個階段證據都達到 strong。
