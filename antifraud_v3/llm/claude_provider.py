@@ -1,3 +1,5 @@
+import os
+
 import anthropic
 from pydantic import BaseModel
 
@@ -18,6 +20,14 @@ class ClaudeProvider(LLMProvider):
     def __init__(self, model: str = "claude-opus-5", effort: str = "medium"):
         if effort not in _VALID_EFFORTS:
             raise ValueError(f"effort must be one of {_VALID_EFFORTS}, got {effort!r}")
+        # .env.example ships ANTHROPIC_API_KEY= (blank) as the "use `ant auth login` instead"
+        # default. Confirmed by testing: once load_dotenv() puts that blank value into
+        # os.environ, the SDK treats it as an explicitly-provided (but empty) key rather than
+        # an absent one, which disables its fallback to `ant auth login` credentials entirely —
+        # every call then fails with "Could not resolve authentication method". Treat blank as
+        # unset so the credential fallback actually runs.
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            os.environ.pop("ANTHROPIC_API_KEY", None)
         self.client = anthropic.Anthropic()
         self.model = model
         self.effort = effort

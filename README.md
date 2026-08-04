@@ -3,6 +3,53 @@
 即時分析電話通話音訊、偵測詐騙手法並在通話中示警的工具。目前版本是 `antifraud_v3/`，
 上一版 `antifraud_v2`（Streamlit、事後分析整通電話）已刪除，可從 git commit `0c66823` 找回。
 
+## 如何使用這個專案
+
+1. **安裝環境**
+   ```bash
+   conda create -n AFG python=3.10   # 或用你自己的 venv
+   conda activate AFG
+   pip install -r antifraud_v3/requirements.txt
+   ```
+2. **設定 LLM**
+   ```bash
+   cp antifraud_v3/.env.example antifraud_v3/.env
+   ```
+   預設 `LLM_PROVIDER=claude_code`，不用填任何金鑰——只要這台機器的 `claude` CLI 是登入狀態
+   （跑 `claude auth status` 確認 `authMethod: "claude.ai"`），就會走你的 Claude Pro/Max 訂閱額度，
+   不是按 token 計費的 API。如果你有獨立的 API 金鑰想用，見下方「LLM 認證細節」。
+3. **啟動伺服器**
+   ```bash
+   cd /home/tommy/Project/AFG
+   uvicorn antifraud_v3.server.main:app --reload
+   ```
+4. **打開瀏覽器**：連到 `http://localhost:8000`，允許麥克風權限，按「開始監聽」即時分析通話；
+   或用「上傳錄音分析」分頁分析事後錄好的錄音；「測試資料」分頁可以直接跑內建的範例音檔看效果。
+5. **（選用）在手機瀏覽器上用**：瀏覽器只有在 `https://` 或 `http://localhost` 底下才會允許存取
+   麥克風，用手機連到區網/公網上另一台機器的 `http://` 網址不會跳出權限請求，需要另外跑 HTTPS——
+   完整步驟見 [`antifraud_v3/docs/HTTPS.md`](antifraud_v3/docs/HTTPS.md)。
+
+**LLM 認證細節**：如果你有獨立的、有額度的 API 金鑰，可以切回原本直接呼叫 API 的路徑：把
+`antifraud_v3/.env` 的 `LLM_PROVIDER` 改成 `claude`，並填 `ANTHROPIC_API_KEY`（或安裝
+[`ant` CLI](https://github.com/anthropics/anthropic-cli) 跑 `ant auth login`）。這兩個設定
+在前端「設定」畫面也可以直接切換，不用改檔案重開伺服器。
+
+## 這個專案怎麼分析一通電話
+
+一句話講完（VAD 偵測到停頓）就立刻分析聲學/語音/情緒，即時顯示；LLM 判斷則是整通電話結束後才跑一次：
+
+- **VAD 切句**（silero-vad）——偵測「一句話講完」，不是固定秒數硬切。
+- **語音辨識 ASR**（faster-whisper）——即時把每句話轉成逐字稿。
+- **聲學特徵分析**（parselmouth／librosa）——音高、音量、jitter/shimmer/HNR（聲音顫抖度）、
+  語速與停頓變化，即時算出並畫成圖。
+- **情緒辨識**（TIMNet）——即時標出每句話的情緒（生氣／恐懼／中性等），當作輔助證據，不是硬性門檻。
+- **關鍵字立即示警**（純字串比對，不用 LLM）——通話進行中命中「要求驗證碼」「要求轉帳」等關鍵字
+  立刻示警，這是通話中唯一即時的示警來源。
+- **LLM 推理**（判別 → 反思 → 綜合三步驟，Claude）——通話結束後對整段逐字稿+聲學+情緒摘要跑一次，
+  產出最終風險等級與說明；「反思」步驟專門找「這個證據有沒有無辜的解釋」，避免把正常對話誤判成詐騙。
+
+完整設計脈絡與為什麼這樣分工（即時 vs. 事後一次）見下方「架構」與 `antifraud_v3/docs/DESIGN.md`。
+
 ## 為什麼重寫
 
 `antifraud_v2` 的 `fraud_detection.py` 用「逐一指標加總門檻分數」的規則引擎判斷風險，這個設計
@@ -22,62 +69,46 @@
                                      VAD 切句（silero-vad）
                                             │
                               ┌─────────────┼─────────────┐
-                         語音辨識      聲學特徵分析      情緒辨識
-                       (faster-whisper) (parselmouth)   (TIMNet)
+                         語音辨識      聲學特徵分析      情緒辨識        ← 每句話即時跑，不用 LLM
+                       (faster-whisper) (parselmouth)   (TIMNet)          即時推送到前端逐字稿
                               └─────────────┼─────────────┘
+                                            │ （同時：關鍵字比對，命中立即示警，不用 LLM）
                                             │
-                          LLM 推理引擎：判別 → 反思 → 綜合
-                             （Claude，可插拔 provider 介面）
+                              …（通話進行中持續累積逐字稿／聲學／情緒）…
                                             │
-                              風險趨勢 + 示警 ──WebSocket──▶ 前端即時畫面
+                                      「結束監聽」
+                                            │
+                          LLM 推理引擎：判別 → 反思 → 綜合          ← 整通電話只跑這一次
+                        （claude_code：走 Claude Pro/Max 訂閱額度，
+                          或 claude：anthropic API，可插拔 provider 介面）
+                                            │
+                              最終研判 + 示警 ──WebSocket──▶ 前端即時畫面
                                             │
                                   SQLite 通話紀錄／JSON 設定
 ```
 
 - **不用固定秒數切句，用 VAD 偵測「一句話講完」**——這樣聲學特徵、情緒模型、LLM 推理才是對著完整
   語句分析，不是隨機切到一半。
+- **聲學／語音辨識／情緒分析是即時的，LLM 推理只在通話結束後跑一次**——原本每句話都跑一次
+  `discriminate → reflect → synthesize`（判別 → 反思 → 綜合），對沒有付費 API 額度來說成本太高；
+  現在通話中即時串流的只有 ASR/聲學/情緒（都是本地模型，不用 LLM），完整的 LLM 研判在「結束監聽」
+  後對整通逐字稿跑一次，見 `antifraud_v3/pipeline/chunk_worker.py` 的 `run_final_analysis`。
 - **偵測邏輯是 LLM 推理，不是規則引擎**——`reasoning/discriminate.py` → `reflect.py` →
   `synthesize.py`，反思步驟專門找「這個證據有沒有無辜的解釋」，這是舊版規則引擎完全沒有的機制。
-- **示警要連續幾句風險都偏高才觸發**（debounce，可在設定畫面調），單一句話不會觸發一般示警；但一組
-  「立即示警」關鍵字（要求驗證碼、要求轉帳等）可以跳過這個限制直接示警。
-- **LLM 供應商可插拔**——`llm/base.py` 定義介面，`llm/claude_provider.py` 是目前唯一實作，換供應商
-  只需要新增一個 class，不用動推理邏輯本身。
+- **「立即示警」關鍵字比對是通話進行中即時跑的**（要求驗證碼、要求轉帳等，純字串比對、不用 LLM，見
+  `pipeline/call_state.py` 的 `check_live_hard_trigger`）——這是通話還在進行中時唯一即時的示警來源，
+  因為完整的 LLM 研判被延後到通話結束才跑。
+- **LLM 供應商可插拔**——`llm/base.py` 定義介面。預設是 `llm/claude_code_provider.py`（呼叫
+  `claude` CLI，走 Claude Pro/Max 訂閱額度，不用按 token 付費的 API 金鑰）；`llm/claude_provider.py`
+  是原本直接呼叫 anthropic API 的實作，有獨立 API 金鑰的話還是可以用。換供應商只需要新增一個
+  class，不用動推理邏輯本身。
 - **情緒辨識（TIMNet）刻意當弱訊號用**，不是硬性門檻——訓練語料是英/德/義等語言的表演式情緒語料，
   不是中文電話對話，實測對這個場景的預測不太準，所以只當 LLM 推理時的參考證據之一。
 - **除了即時監聽，也可以上傳事後錄好的通話錄音分析**（`POST /api/upload-call`，前端「上傳錄音分析」
-  分頁）——跑一樣的 VAD 切句 + per-chunk pipeline，差別只在於同步跑完整段錄音、一次回傳結果，而不是
-  像即時通話一樣用 WebSocket 逐句推送（批次分析不像即時監聽那樣對延遲敏感，見
+  分頁）——跑一樣的 VAD 切句 + 逐句訊號擷取 + 一次最終分析，差別只在於同步跑完整段錄音、一次回傳結果，
+  而不是像即時通話一樣用 WebSocket 逐句推送（批次分析不像即時監聽那樣對延遲敏感，見
   `antifraud_v3/server/upload.py` 開頭的說明）。結果一樣會存進歷史紀錄，用 `source` 欄位跟即時通話
   區分開來。
-
-## 安裝與設定
-
-```bash
-conda create -n AFG python=3.10   # 或用你自己的 venv
-conda activate AFG
-pip install -r antifraud_v3/requirements.txt
-cp antifraud_v3/.env.example antifraud_v3/.env
-```
-
-**LLM 認證**（擇一）：
-- 有 Claude 訂閱、不想另外買 API 額度：安裝 [`ant` CLI](https://github.com/anthropics/anthropic-cli)，
-  跑 `ant auth login`（互動式瀏覽器登入，跟你的帳號綁定）。`llm/claude_provider.py` 用空建構子
-  `anthropic.Anthropic()`，會自動抓這組登入狀態，不用改設定。
-- 有獨立 API 金鑰：填到 `antifraud_v3/.env` 的 `ANTHROPIC_API_KEY`。
-
-## 執行
-
-```bash
-cd /home/tommy/Project/AFG
-uvicorn antifraud_v3.server.main:app --reload
-```
-
-開瀏覽器連 `http://localhost:8000`，允許麥克風權限後按「開始監聽」。
-
-**在手機瀏覽器上用**（在真實通話中即時監聽的實際使用情境）：瀏覽器只有在 `https://` 或
-`http://localhost` 底下才會允許存取麥克風，用手機連到區網或公網上另一台機器的 `http://` 網址不會
-跳出權限請求。跑 HTTPS 有兩種驗證過可行的做法（自簽憑證給區網用、或用 `cloudflared` 之類的通道服務
-拿到一個公開的 HTTPS 網址），完整步驟見 [`antifraud_v3/docs/HTTPS.md`](antifraud_v3/docs/HTTPS.md)。
 
 ## 專案結構
 
@@ -87,7 +118,7 @@ antifraud_v3/
 ├── asr/            faster-whisper 語音辨識
 ├── llm/            可插拔 LLM 供應商介面 + Claude 實作
 ├── reasoning/       判別/反思/綜合推理引擎、詐騙話術 rubric、Pydantic schema
-├── pipeline/        單一 chunk 的處理流程整合、通話狀態機（risk trajectory、示警 debounce）
+├── pipeline/        逐句訊號擷取 + 整通電話一次性最終分析、通話狀態機（逐字稿、示警狀態）
 ├── server/          FastAPI app、WebSocket 即時端點、REST API（歷史紀錄／設定／上傳分析）
 ├── storage/         SQLite 通話歷史、JSON 設定檔存取
 ├── frontend/        即時通話／上傳分析／歷史紀錄／設定四個畫面（純 HTML/CSS/JS，無框架）

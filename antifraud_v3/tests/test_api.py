@@ -32,20 +32,20 @@ def test_get_settings_returns_defaults(client):
 
 
 def test_post_settings_updates_and_persists(client):
-    r = client.post("/api/settings", json={"debounce_chunks": 5})
+    r = client.post("/api/settings", json={"llm_provider": "claude"})
     assert r.status_code == 200
-    assert r.json()["debounce_chunks"] == 5
+    assert r.json()["llm_provider"] == "claude"
 
     r2 = client.get("/api/settings")
-    assert r2.json()["debounce_chunks"] == 5
+    assert r2.json()["llm_provider"] == "claude"
 
 
 def test_post_settings_partial_update_ignores_unset_fields(client):
     client.post("/api/settings", json={"llm_model": "claude-sonnet-5"})
-    r = client.post("/api/settings", json={"debounce_chunks": 3})
+    r = client.post("/api/settings", json={"llm_effort": "high"})
     body = r.json()
     assert body["llm_model"] == "claude-sonnet-5"
-    assert body["debounce_chunks"] == 3
+    assert body["llm_effort"] == "high"
 
 
 def test_post_settings_hard_triggers_update(client):
@@ -62,9 +62,7 @@ def test_list_calls_empty(client):
 def test_list_calls_after_finishing_one(client):
     call_id = history.create_call()
     cs = CallState()
-    cs.record_chunk(
-        "t1",
-        None,
+    cs.apply_final_result(
         SynthesizeResult(risk_level="high", chunk_risk_score=90, hard_triggers=[], justification="j", case_memory_update=""),
     )
     history.finish_call(call_id, cs, ended_reason="stopped")
@@ -85,9 +83,9 @@ def test_get_call_detail_not_found_returns_404(client):
 def test_get_call_detail_returns_transcript_and_trajectory(client):
     call_id = history.create_call()
     cs = CallState()
-    cs.record_chunk(
-        "詐騙測試逐字稿",
-        None,
+    features = {"pitch": {"mean_pitch": 0.0, "valid_samples": 0}, "volume": {}, "speech_rate": {}}
+    cs.record_chunk_signals("詐騙測試逐字稿", None, features, {})
+    cs.apply_final_result(
         SynthesizeResult(risk_level="medium", chunk_risk_score=50, hard_triggers=[], justification="j", case_memory_update=""),
     )
     history.finish_call(call_id, cs, ended_reason="stopped")

@@ -118,6 +118,11 @@
   .pulse-dot::after { animation: pulse 2.2s ease-out infinite; }
   @media (prefers-reduced-motion: reduce) { .pulse-dot::after { animation: none; opacity: .4; } }
   @keyframes pulse { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(2.6); opacity: 0; } }
+  .mic-level {
+    width: 56px; height: 6px; border-radius: 999px; background: var(--surface-2);
+    border: 1px solid var(--border); overflow: hidden; flex-shrink: 0;
+  }
+  .mic-level-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 999px; transition: width 80ms linear; }
   .call-meta-label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); }
   .call-duration { font-size: 20px; font-weight: 700; margin-top: 1px; }
   .call-header-right { display: flex; align-items: center; gap: 18px; }
@@ -184,6 +189,29 @@
   .chart-endpoint { fill: var(--risk-low); }
   .chart-endpoint.alert { fill: var(--risk-high); }
 
+  /* Live acoustic (pitch) chart — separate from the risk chart above: this one streams during
+     the call itself (ASR/acoustic/emotion, no LLM), the risk chart only gets one point once
+     the end-of-call LLM analysis finishes. See pipeline/chunk_worker.py. */
+  .pitch-chart-wrap { position: relative; height: 56px; }
+  .pitch-chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
+  .pitch-area { fill: var(--accent); opacity: 0.1; }
+  .pitch-line { fill: none; stroke: var(--accent); stroke-width: 2; transition: d .3s ease; }
+
+  .emo-badge {
+    display: inline-flex; align-items: center; font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 999px; letter-spacing: 0.02em;
+  }
+  .emo-badge.emo-low { background: var(--risk-low-soft); color: var(--risk-low); }
+  .emo-badge.emo-medium { background: var(--risk-medium-soft); color: var(--risk-medium); }
+  .emo-badge.emo-high { background: var(--risk-high-soft); color: var(--risk-high); }
+  .emo-badge.emo-neutral { background: var(--surface-2); color: var(--ink-faint); }
+
+  .evidence-details { margin-top: 12px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .evidence-details summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+  .evidence-block { margin-top: 8px; font-size: 12px; line-height: 1.7; color: var(--ink-soft); white-space: pre-wrap; max-height: 220px; overflow-y: auto; }
+  .evidence-block .label { font-weight: 700; color: var(--ink); display: block; margin-top: 8px; }
+  .evidence-block .label:first-child { margin-top: 0; }
+
   .transcript-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; }
   .t-row { display: grid; grid-template-columns: 52px 1fr; gap: 12px; padding: 9px 8px; border-radius: 9px; }
   .t-row.flagged { background: var(--risk-high-soft); }
@@ -191,7 +219,17 @@
   .t-content { font-size: 14px; line-height: 1.6; }
   .t-speaker { font-size: 11px; font-weight: 700; color: var(--ink-faint); margin-right: 6px; }
   .t-row.flagged .t-speaker { color: var(--risk-high); }
+  /* Live "still speaking" preview — provisional ASR-only guess, not yet risk-analyzed, so it's
+     deliberately muted/italic to read as "not final yet" until the real row replaces it. */
+  .t-row.t-interim { opacity: 0.6; font-style: italic; }
+  .t-row.t-interim .t-time { visibility: hidden; }
   .t-placeholder { font-size: 13px; color: var(--ink-faint); padding: 12px 8px; }
+  .t-justification { font-size: 12px; color: var(--ink-faint); margin-top: 3px; line-height: 1.5; }
+  .t-row.flagged .t-justification { color: var(--risk-high); opacity: 0.85; }
+
+  .test-clip-card { margin-bottom: 14px; }
+  .test-clip-card audio { width: 100%; margin-bottom: 12px; }
+  .test-clip-card .panel-title { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 700; color: var(--ink); }
 
   .history-row {
     display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 16px;
@@ -259,6 +297,7 @@
     <button class="tab active" data-screen="live">即時通話</button>
     <button class="tab" data-screen="upload">上傳錄音分析</button>
     <button class="tab" data-screen="history">歷史紀錄</button>
+    <button class="tab" data-screen="testdata">測試資料</button>
     <button class="tab" data-screen="settings">設定</button>
   </div>
 
@@ -267,6 +306,7 @@
     <div class="call-header">
       <div class="call-status-left">
         <div class="pulse-dot" style="opacity:.25;"></div>
+        <div class="mic-level" id="micLevel" title="麥克風音量"><div class="mic-level-fill" id="micLevelFill"></div></div>
         <div>
           <div class="call-meta-label">尚未開始監聽</div>
           <div class="call-duration mono" id="callDuration">00:00</div>
@@ -297,7 +337,7 @@
 
     <div class="panel">
       <div class="panel-head">
-        <div class="panel-title">風險趨勢</div>
+        <div class="panel-title">最終研判</div>
         <div style="display:flex; align-items:center; gap:10px;">
           <div class="risk-readout">
             <span class="num mono" id="riskNum">0</span><span class="unit">/ 100</span>
@@ -327,6 +367,25 @@
           <circle id="chartEndpoint" class="chart-endpoint" cx="0" cy="92" r="4"/>
         </svg>
       </div>
+      <div class="field-help" id="finalJustification" style="margin-top:12px;">
+        聲學／語音辨識／情緒分析在通話中即時顯示於下方；完整研判會在「結束監聽」後才跑一次，結果顯示在這裡。
+      </div>
+      <div id="liveEvidence"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">聲學／情緒（即時）</div>
+        <span class="emo-badge emo-neutral" id="liveEmotionBadge">尚無資料</span>
+      </div>
+      <div class="pitch-chart-wrap">
+        <svg viewBox="0 0 400 56" preserveAspectRatio="none">
+          <path class="pitch-area" id="livePitchArea" d="M0,56 L400,56 Z"/>
+          <path class="pitch-line" id="livePitchLine" d="M0,56 L400,56"/>
+          <circle class="chart-endpoint" style="fill:var(--accent)" id="livePitchEndpoint" cx="0" cy="56" r="3"/>
+        </svg>
+      </div>
+      <div class="field-help mono" id="liveAcousticReadout" style="margin-top:8px; margin-bottom:0;">尚未偵測到聲音。</div>
     </div>
 
     <div class="panel">
@@ -343,8 +402,8 @@
       <div class="panel-head"><div class="panel-title">上傳錄音分析</div></div>
       <div class="field-help" style="margin-bottom:14px;">
         上傳事後錄好的通話錄音（wav/flac/ogg，16kHz 單聲道效果最好），會用跟即時監聽一樣的
-        VAD 切句、語音辨識、聲學／情緒特徵、LLM 推理流程分析整段錄音，結果也會存進歷史紀錄。
-        錄音可能需要數十秒到數分鐘才能分析完畢，視錄音長度而定。
+        VAD 切句、語音辨識、聲學／情緒特徵分析整段錄音——逐句結果會先顯示出來，LLM 最終研判最後才出現，
+        結果也會存進歷史紀錄。錄音可能需要數十秒到數分鐘才能分析完畢，視錄音長度而定。
       </div>
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <input type="file" id="uploadFileInput" accept="audio/*" />
@@ -356,7 +415,22 @@
     <div id="uploadResult" style="display:none;">
       <div class="panel">
         <div class="panel-head">
-          <div class="panel-title">風險趨勢</div>
+          <div class="panel-title">聲學／情緒</div>
+          <span class="emo-badge emo-neutral" id="uploadEmotionBadge">尚無資料</span>
+        </div>
+        <div class="pitch-chart-wrap">
+          <svg viewBox="0 0 400 56" preserveAspectRatio="none">
+            <path class="pitch-area" id="uploadPitchArea" d="M0,56 L400,56 Z"/>
+            <path class="pitch-line" id="uploadPitchLine" d="M0,56 L400,56"/>
+            <circle class="chart-endpoint" style="fill:var(--accent)" id="uploadPitchEndpoint" cx="0" cy="56" r="3"/>
+          </svg>
+        </div>
+        <div class="field-help mono" id="uploadAcousticReadout" style="margin-top:8px; margin-bottom:0;">尚未偵測到聲音。</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">最終研判</div>
           <div style="display:flex; align-items:center; gap:10px;">
             <div class="risk-readout">
               <span class="num mono" id="uploadRiskNum">0</span><span class="unit">/ 100</span>
@@ -379,6 +453,7 @@
           </svg>
         </div>
         <div class="field-help mono" id="uploadSummary" style="margin-top:10px;"></div>
+        <div id="uploadEvidence"></div>
       </div>
 
       <div class="panel">
@@ -395,18 +470,86 @@
 
   <!-- ============ HISTORY ============ -->
   <div class="screen" id="screen-history">
-    <div class="panel-title" style="margin-bottom:12px;">最近通話</div>
-    <div id="historyList">
-      <div class="placeholder-note" id="historyPlaceholder">還沒有通話紀錄——結束一次「開始監聽」就會出現在這裡。</div>
+    <div id="historyListView">
+      <div class="panel-title" style="margin-bottom:12px;">最近通話</div>
+      <div id="historyList">
+        <div class="placeholder-note" id="historyPlaceholder">還沒有通話紀錄——結束一次「開始監聽」就會出現在這裡。</div>
+      </div>
     </div>
+
+    <div id="historyDetailView" style="display:none;">
+      <button class="btn-toggle-listen" id="btnHistoryBack" style="margin-bottom:14px;">← 返回列表</button>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">最終研判</div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="risk-readout">
+              <span class="num mono" id="historyRiskNum">0</span><span class="unit">/ 100</span>
+            </div>
+            <span class="risk-pill low" id="historyRiskPill">低風險</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <svg viewBox="0 0 400 92" preserveAspectRatio="none">
+            <!-- reuses #areaGradCalm/#areaGradAlert defined in the live screen's svg —
+                 SVG gradient refs resolve by id anywhere in the document -->
+            <g class="chart-grid">
+              <line x1="0" y1="23" x2="400" y2="23"/>
+              <line x1="0" y1="46" x2="400" y2="46"/>
+              <line x1="0" y1="69" x2="400" y2="69"/>
+            </g>
+            <path id="historyChartArea" class="chart-area" d="M0,92 L400,92 Z"/>
+            <path id="historyChartLine" class="chart-line" d="M0,92 L400,92"/>
+            <circle id="historyChartEndpoint" class="chart-endpoint" cx="0" cy="92" r="4"/>
+          </svg>
+        </div>
+        <div class="field-help mono" id="historyDetailSummary" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">示警</div></div>
+        <div id="historyDetailAlertsList"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">逐字稿</div></div>
+        <div class="transcript-list" id="historyDetailTranscriptList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TEST DATA ============ -->
+  <div class="screen" id="screen-testdata">
+    <div class="field-help" style="margin-bottom:16px;">
+      從 <span class="mono">eval/test_clips/</span> 的 benign／scam 各挑 3 個範例，可以直接播放原始錄音、
+      跑跟即時通話一樣的分析流程——逐句語音辨識／聲學／情緒會先顯示出來，LLM 最終研判最後才出現，
+      檢查逐字稿與判斷依據是否合理。這裡的結果不會存進歷史紀錄。
+    </div>
+
+    <div class="panel-title" style="margin-bottom:12px;">Benign（正常通話）</div>
+    <div id="testDataBenign"></div>
+
+    <div class="panel-title" style="margin:22px 0 12px;">Scam（詐騙通話）</div>
+    <div id="testDataScam"></div>
   </div>
 
   <!-- ============ SETTINGS ============ -->
   <div class="screen" id="screen-settings">
     <div class="panel">
       <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label">推理提供者</div>
+        <div class="field-help">claude_code 透過 claude CLI 走 Claude Pro/Max 訂閱額度（不需要 API 金鑰）；claude 走 anthropic SDK 直接 API（需要 ANTHROPIC_API_KEY，按 token 計費）。</div>
+        <select class="field-input" id="providerSelect">
+          <option value="claude_code">claude_code（預設，走訂閱額度）</option>
+          <option value="claude">claude（需要 ANTHROPIC_API_KEY）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="field-group" style="margin-bottom:0;">
         <div class="field-label">推理模型</div>
-        <div class="field-help">目前接的是 Claude（見 antifraud_v3/llm/）。變更後下一通電話開始生效。</div>
+        <div class="field-help">整通電話結束後才會呼叫一次（見 pipeline/chunk_worker.py 的 run_final_analysis）。變更後下一通電話開始生效。</div>
         <select class="field-input" id="modelSelect">
           <option value="claude-opus-5">claude-opus-5（預設，品質優先）</option>
           <option value="claude-sonnet-5">claude-sonnet-5（速度/成本平衡）</option>
@@ -417,7 +560,7 @@
     <div class="panel">
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label">推理強度 Effort</div>
-        <div class="field-help">每句話都會呼叫 2–3 次模型，強度越高，判斷越仔細但成本也越高。</div>
+        <div class="field-help">整通電話只呼叫這一次，強度越高，判斷越仔細但耗時也越久。</div>
         <div class="effort-row" id="effortRow">
           <div class="effort-opt" data-value="low">low</div>
           <div class="effort-opt" data-value="medium">medium</div>
@@ -429,19 +572,8 @@
 
     <div class="panel">
       <div class="field-group" style="margin-bottom:0;">
-        <div class="field-label">示警敏感度</div>
-        <div class="field-help">需要連續幾句話風險都偏高，才會觸發一般示警（不影響「立即示警」關鍵字清單）。</div>
-        <div class="slider-row">
-          <input type="range" min="1" max="5" value="2" id="debounceSlider"/>
-          <span class="slider-val mono" id="debounceVal">2 句</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="field-group" style="margin-bottom:0;">
         <div class="field-label">立即示警關鍵字</div>
-        <div class="field-help">符合以下任一項目，不用等連續累積即可直接示警（見 reasoning/rubric.py 的 DEFAULT_HARD_TRIGGERS）。</div>
+        <div class="field-help">通話進行中即時比對（不用 LLM），符合以下任一項目就直接示警；通話結束後的最終分析會再用這份清單重新檢視一次整通電話（見 reasoning/rubric.py 的 DEFAULT_HARD_TRIGGERS）。</div>
         <div class="chip-list" id="hardTriggerList"></div>
       </div>
     </div>

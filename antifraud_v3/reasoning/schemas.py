@@ -7,15 +7,18 @@ Strength = Literal["none", "weak", "moderate", "strong"]
 
 
 class ChunkEvidence(BaseModel):
-    """Everything the reasoning engine knows about one chunk. Built by pipeline/chunk_worker.py
-    from ASR + acoustic + emotion output; this is the input side of the LLMProvider boundary.
+    """Everything the reasoning engine knows going into one discriminate/reflect/synthesize
+    pass. Despite the name, this now carries the *whole call's* transcript + aggregated
+    acoustic/emotion summary (pipeline/chunk_worker.py's run_final_analysis) rather than a
+    single chunk — the reasoning pipeline itself is unchanged, only called once per call
+    instead of once per chunk. This is the input side of the LLMProvider boundary.
     """
 
     transcript_segment: str
     speaker_guess: str | None = None
     acoustic_summary: str  # human-readable, e.g. "pitch range 210Hz (elevated vs baseline), jitter 1.8%, HNR 12dB, speech rate steady"
     emotion_summary: str  # human-readable, e.g. "neutral 0.61, fear 0.22, happy 0.09, ..."
-    call_state_summary: str  # rolling case-memory from CallState, see pipeline/call_state.py
+    call_state_summary: str  # unused now that reasoning runs once per call, not per chunk; kept "" by callers
 
 
 class StageEvidence(BaseModel):

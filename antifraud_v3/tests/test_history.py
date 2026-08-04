@@ -22,7 +22,7 @@ def make_result(risk_level="low"):
 def test_create_call_defaults_to_live_source(temp_history_db):
     call_id = history.create_call()
     cs = CallState()
-    cs.record_chunk("hello", None, make_result("low"))
+    cs.apply_final_result(make_result("low"))
     history.finish_call(call_id, cs, ended_reason="stopped")
 
     calls = history.list_calls()
@@ -52,17 +52,23 @@ def test_finish_call_duration_override_used_over_wall_clock(temp_history_db):
     assert detail["duration_seconds"] == 97.3
 
 
-def test_finish_call_final_risk_level_is_the_highest_reached(temp_history_db):
+def test_finish_call_final_risk_level_reflects_the_one_final_result(temp_history_db):
+    """The reasoning pipeline runs once per call now (see pipeline/chunk_worker.py's
+    run_final_analysis), so risk_trajectory holds exactly one point — no more "highest across
+    chunks" to pick. Transcript entries come from record_chunk_signals independently of that
+    one final verdict."""
     call_id = history.create_call()
-    cs = CallState(debounce_chunks=99)  # avoid alert-related side effects, not under test here
-    cs.record_chunk("t1", None, make_result("low"))
-    cs.record_chunk("t2", None, make_result("high"))
-    cs.record_chunk("t3", None, make_result("medium"))
+    cs = CallState()
+    features = {"pitch": {"mean_pitch": 0.0, "valid_samples": 0}, "volume": {}, "speech_rate": {}}
+    cs.record_chunk_signals("t1", None, features, {})
+    cs.record_chunk_signals("t2", None, features, {})
+    cs.record_chunk_signals("t3", None, features, {})
+    cs.apply_final_result(make_result("high"))
     history.finish_call(call_id, cs, ended_reason="stopped")
 
     detail = history.get_call_detail(call_id)
     assert detail["final_risk_level"] == "high"
-    assert len(detail["risk_trajectory"]) == 3
+    assert len(detail["risk_trajectory"]) == 1
     assert len(detail["transcript"]) == 3
 
 

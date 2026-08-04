@@ -18,7 +18,7 @@ import soundfile as sf
 
 from ..llm import get_llm_provider
 from ..pipeline.call_state import CallState
-from ..pipeline.chunk_worker import process_chunk
+from ..pipeline.chunk_worker import process_chunk_signals, run_final_analysis
 from .regression_log import log_result
 
 TEST_CLIPS_DIR = Path(__file__).parent / "test_clips"
@@ -30,13 +30,16 @@ def run_clip(path: Path, expected_category: str, provider) -> None:
         y = y.mean(axis=1)  # downmix to mono
 
     call_state = CallState()
-    result = process_chunk(y, sr, provider, call_state)
+    signals = process_chunk_signals(y, sr, call_state)
+    live_alert = signals.alert if signals is not None else None
 
-    alert_fired = result is not None and result.alert is not None
+    outcome = run_final_analysis(provider, call_state)
+    final_alert = outcome[1] if outcome is not None else None
+
+    alert = live_alert or final_alert
+    alert_fired = alert is not None
     alert_timestamp = call_state.risk_trajectory[-1].timestamp if call_state.risk_trajectory else None
-    cited_pattern = (
-        (result.alert.trigger_name or result.alert.reason) if alert_fired else None
-    )
+    cited_pattern = (alert.trigger_name or alert.reason) if alert_fired else None
     log_result(path.name, expected_category, alert_fired, alert_timestamp, cited_pattern)
     print(f"{path.name}: expected={expected_category} alert_fired={alert_fired} cited={cited_pattern}")
 

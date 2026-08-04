@@ -50,11 +50,34 @@ DEFAULT_HARD_TRIGGERS = [
     "要求不要告訴家人或不要跟銀行/警方求證",
 ]
 
-DISCRIMINATE_SYSTEM_PROMPT = f"""你是一個電話詐騙偵測助理，正在分析一通電話裡剛剛講完的一句話（chunk）。
+# Literal substrings for the *live*, no-LLM hard-trigger check (pipeline/call_state.py's
+# check_live_hard_trigger). DEFAULT_HARD_TRIGGERS above are descriptive rule names fed to the
+# final one-shot LLM analysis (reasoning/synthesize.py) — those can't be substring-matched
+# against a transcript directly. This is a separate, deliberately not user-editable (unlike
+# DEFAULT_HARD_TRIGGERS, see storage/settings_store.py's hard_triggers setting) list, because
+# the whole point is near-zero latency/cost during a live call — a fast path that still
+# catches the handful of phrases severe enough to warn on immediately, while the nuanced
+# reasoning happens once at call end (docs/DESIGN.md §2.2's original per-chunk LLM hard-trigger
+# check no longer runs per chunk at all, see pipeline/chunk_worker.py).
+HARD_TRIGGER_KEYWORDS: dict[str, list[str]] = {
+    "要求提供簡訊/OTP 驗證碼": ["驗證碼", "認證碼", "OTP", "one-time password"],
+    "要求「圈存」或「保護帳戶」（常見假保護話術）": ["圈存", "保護帳戶", "帳戶保護", "資金保護", "凍結您的帳戶"],
+    "要求轉帳到指定帳戶或購買虛擬貨幣/點數卡": [
+        "轉帳", "匯款", "虛擬貨幣", "比特幣", "點數卡", "儲值卡", "遊戲點數", "購買禮品卡",
+    ],
+    "要求不要告訴家人或不要跟銀行/警方求證": [
+        "不要告訴", "不要跟家人", "不要跟銀行", "不要報警", "不能讓別人知道", "不要讓別人知道", "這是機密",
+    ],
+}
+
+DISCRIMINATE_SYSTEM_PROMPT = f"""你是一個電話詐騙偵測助理，正在分析一通電話結束後的完整逐字稿（含每句話的時間戳記）、
+整通電話彙總後的聲學特徵、以及整通電話彙總後的情緒機率分布。這是整通電話結束後唯一一次的完整分析，
+不是逐句即時判斷——請通盤考慮整通對話的脈絡（例如同一個要求在通話中反覆出現、或情勢隨時間升高），
+不要只看單一句話。
 
 {SCAM_KILL_CHAIN_RUBRIC}
 
-針對這個 chunk，逐一評估四個階段目前的證據強度，並用一兩句話引用具體的逐字稿內容或聲學特徵作為理由。
+針對這通電話，逐一評估四個階段目前的證據強度，並用一兩句話引用具體的逐字稿內容或聲學特徵作為理由。
 沒有證據支持的階段，強度就是 none，不要為了填滿而勉強找理由。"""
 
 REFLECT_SYSTEM_PROMPT = """你是同一個詐騙偵測系統裡的「反思」步驟，任務是主動挑戰前一步（判別步驟）的結論，
@@ -76,9 +99,9 @@ def build_synthesize_system_prompt(hard_triggers: list[str] | None = None) -> st
     triggers = hard_triggers if hard_triggers is not None else DEFAULT_HARD_TRIGGERS
     trigger_lines = "\n".join(f"- {t}" for t in triggers)
     return f"""你是詐騙偵測系統的「綜合」步驟，根據反思後的階段證據 + 立即示警關鍵字清單，
-產出這個 chunk 的風險評估。
+產出這通電話唯一一次的最終風險評估（整通電話結束後才跑一次，不是逐句判斷）。
 
-立即示警關鍵字清單（符合任一項，即使只有這一句話，也可以判定 risk_level=high）：
+立即示警關鍵字清單（整通電話中只要出現任一項，即使只有一句話，也可以判定 risk_level=high）：
 {trigger_lines}
 
 risk_level 的判斷：
@@ -86,8 +109,8 @@ risk_level 的判斷：
 - medium：至少一個階段證據達到 moderate 以上，但沒有命中立即示警關鍵字。
 - low：其餘情況，包含所有階段都是 none/weak 的正常對話。
 
-justification 要具體、可以直接顯示在使用者看到的示警橫幅上，不要只寫「風險偏高」這種空話——
+justification 要具體、可以直接顯示給使用者看，不要只寫「風險偏高」這種空話——
 要講清楚「為什麼」，例如「對方要求提供簡訊驗證碼，這是常見盜刷手法」。
 
-case_memory_update 是給下一個 chunk 用的通話狀態摘要，簡短記錄目前為止已經確立的事實
+case_memory_update 是這通電話的簡短案件摘要，記錄目前為止已經確立的事實
 （例如「對方自稱銀行，已要求提供帳號一次」），不用重複整段逐字稿。"""

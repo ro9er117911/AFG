@@ -38,7 +38,8 @@ def init_db() -> None:
                 transcript_json TEXT,
                 risk_trajectory_json TEXT,
                 ended_reason TEXT,
-                source TEXT NOT NULL DEFAULT 'live'
+                source TEXT NOT NULL DEFAULT 'live',
+                alerts_json TEXT
             )
             """
         )
@@ -52,6 +53,12 @@ def init_db() -> None:
             conn.execute("ALTER TABLE calls ADD COLUMN source TEXT NOT NULL DEFAULT 'live'")
         except sqlite3.OperationalError:
             pass  # column already exists (fresh DB created by the CREATE TABLE above)
+        # Same story for alerts_json — added once the History detail view started showing which
+        # alerts fired during a call, not just the transcript/risk trajectory.
+        try:
+            conn.execute("ALTER TABLE calls ADD COLUMN alerts_json TEXT")
+        except sqlite3.OperationalError:
+            pass
 
 
 def create_call(source: str = "live") -> int:
@@ -71,6 +78,7 @@ def finish_call(
     call_state: CallState,
     ended_reason: str = "stopped",
     duration_seconds: float | None = None,
+    alerts: list[dict] | None = None,
 ) -> None:
     """Call when a live call ends — persists the transcript + risk trajectory + a summary
     (highest risk level reached) rather than every intermediate LLM justification text, to
@@ -81,6 +89,12 @@ def finish_call(
     a batch-uploaded recording (server/upload.py) it isn't — elapsed_seconds() there measures
     how long ASR/LLM processing took, not the recording's actual length, so the caller passes
     the real audio duration explicitly instead.
+
+    alerts isn't tracked on CallState itself (see pipeline/call_state.py —
+    check_live_hard_trigger()/apply_final_result() each return one alert per call rather than
+    accumulating a list), so the caller collects whichever alerts fired during the call and
+    passes them in here to persist alongside the transcript — otherwise the History detail
+    view would show a transcript but no record of what actually triggered a warning.
     """
     levels_by_severity = {"low": 0, "medium": 1, "high": 2}
     final_level = "low"
@@ -93,7 +107,7 @@ def finish_call(
             """
             UPDATE calls
             SET duration_seconds = ?, final_risk_level = ?, transcript_json = ?,
-                risk_trajectory_json = ?, ended_reason = ?
+                risk_trajectory_json = ?, ended_reason = ?, alerts_json = ?
             WHERE id = ?
             """,
             (
@@ -102,6 +116,7 @@ def finish_call(
                 json.dumps([asdict(t) for t in call_state.transcript], ensure_ascii=False),
                 json.dumps([asdict(r) for r in call_state.risk_trajectory], ensure_ascii=False),
                 ended_reason,
+                json.dumps(alerts or [], ensure_ascii=False),
                 call_id,
             ),
         )
@@ -130,4 +145,5 @@ def get_call_detail(call_id: int) -> dict | None:
         detail = dict(row)
         detail["transcript"] = json.loads(detail.pop("transcript_json") or "[]")
         detail["risk_trajectory"] = json.loads(detail.pop("risk_trajectory_json") or "[]")
+        detail["alerts"] = json.loads(detail.pop("alerts_json") or "[]")
         return detail

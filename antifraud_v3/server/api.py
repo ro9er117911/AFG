@@ -26,9 +26,9 @@ def api_get_call(call_id: int):
 
 
 class SettingsUpdate(BaseModel):
+    llm_provider: str | None = None
     llm_model: str | None = None
     llm_effort: str | None = None
-    debounce_chunks: int | None = None
     hard_triggers: list[str] | None = None
 
 
@@ -41,8 +41,8 @@ def api_get_settings():
 def api_save_settings(update: SettingsUpdate):
     updates = {k: v for k, v in update.model_dump().items() if v is not None}
     saved = save_settings(updates)
-    if "llm_model" in updates or "llm_effort" in updates:
-        # Otherwise the next call would still be served by the stale cached ClaudeProvider —
-        # see llm/__init__.py's reset_provider() docstring.
+    if {"llm_provider", "llm_model", "llm_effort"} & updates.keys():
+        # Otherwise the next call would still be served by the stale cached provider — see
+        # llm/__init__.py's reset_provider() docstring.
         reset_provider()
     return saved

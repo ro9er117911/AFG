@@ -68,6 +68,17 @@ class VADChunker:
 
         return completed
 
+    def peek_in_progress(self) -> np.ndarray | None:
+        """Non-destructive snapshot of the current in-progress utterance (speech that has
+        started but not yet hit a silence gap / the max_chunk_s cap) — used to show a live
+        "still speaking" transcript preview without disturbing push_audio()'s own accumulation
+        state. Safe to call concurrently with push_audio() from another asyncio task on the
+        same event loop: push_audio() never awaits mid-mutation, so there's no point where a
+        concurrent caller could observe a torn/partial _speech_buf."""
+        if not self._speech_buf:
+            return None
+        return np.concatenate(self._speech_buf)
+
     def flush(self) -> np.ndarray | None:
         """Call when the call ends to emit any still-in-progress speech as a final chunk."""
         if not self._speech_buf:

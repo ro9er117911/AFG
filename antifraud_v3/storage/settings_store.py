@@ -15,9 +15,9 @@ SETTINGS_PATH = Path(__file__).resolve().parent.parent / "data" / "settings.json
 # that everything else (llm/__init__.py, server/ws.py) reads from, not raw os.getenv() calls
 # scattered around.
 DEFAULTS = {
+    "llm_provider": os.getenv("LLM_PROVIDER", "claude_code"),
     "llm_model": os.getenv("LLM_MODEL", "claude-opus-5"),
     "llm_effort": os.getenv("LLM_EFFORT", "medium"),
-    "debounce_chunks": int(os.getenv("DEBOUNCE_CHUNKS", "2")),
     "hard_triggers": list(DEFAULT_HARD_TRIGGERS),
 }
 

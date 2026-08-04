@@ -202,6 +202,85 @@ def extract_acoustic_features(y: np.ndarray, sr: int) -> dict:
     }
 
 
+def aggregate_acoustic_features(features_list: list[dict]) -> dict:
+    """Combine one call's worth of per-chunk extract_acoustic_features() dicts into a single
+    call-level summary, in the same nested shape summarize_acoustic_features() expects — used
+    once at call end (pipeline/chunk_worker.py's run_final_analysis) now that the reasoning
+    engine runs once per call instead of once per chunk (see docs/DESIGN.md §8's original
+    per-chunk-LLM-cost concern, and pipeline/call_state.py's module docstring).
+
+    Counts (pauses, sudden changes) are summed across chunks — they're meaningful as call
+    totals. Continuous descriptive stats (pitch, jitter/shimmer/HNR, pause ratio, speech-rate
+    variation) are averaged. Chunks with no voiced pitch (valid_samples == 0, e.g. a very
+    short/quiet utterance) are excluded from the pitch average rather than dragging it toward
+    zero, mirroring summarize_acoustic_features()'s own "no voiced segment" special-case.
+    """
+    if not features_list:
+        return {
+            "speech_rate": {
+                "speech_duration": 0.0, "pause_count": 0, "pause_rate": 0.0, "pause_mean_duration": 0.0,
+                "pause_std_duration": 0.0, "pause_ratio": 0.0, "speech_rate_variation": 0.0,
+                "speech_rate_range": 0.0, "sudden_speed_changes": 0,
+            },
+            "pitch": {
+                "mean_pitch": 0.0, "std_pitch": 0.0, "pitch_range": 0.0, "pitch_change_rate": 0.0,
+                "pitch_instability": 0.0, "pitch_trend": 0.0, "voiced_ratio": 0.0, "valid_samples": 0,
+            },
+            "volume": {"mean_volume": 0.0, "std_volume": 0.0, "volume_range": 0.0, "volume_changes": 0},
+            "tremor": {"jitter_local": 0.0, "jitter_ppq5": 0.0, "shimmer_local": 0.0, "shimmer_apq5": 0.0, "hnr": 0.0},
+        }
+
+    def avg(dicts: list[dict], key: str) -> float:
+        vals = [d[key] for d in dicts]
+        return float(np.mean(vals)) if vals else 0.0
+
+    def total(dicts: list[dict], key: str):
+        return sum(d[key] for d in dicts)
+
+    sr_list = [f["speech_rate"] for f in features_list]
+    pitch_list = [f["pitch"] for f in features_list]
+    voiced_pitch_list = [p for p in pitch_list if p["valid_samples"] > 0]
+    volume_list = [f["volume"] for f in features_list]
+    tremor_list = [f["tremor"] for f in features_list]
+
+    return {
+        "speech_rate": {
+            "speech_duration": total(sr_list, "speech_duration"),
+            "pause_count": total(sr_list, "pause_count"),
+            "pause_rate": avg(sr_list, "pause_rate"),
+            "pause_mean_duration": avg(sr_list, "pause_mean_duration"),
+            "pause_std_duration": avg(sr_list, "pause_std_duration"),
+            "pause_ratio": avg(sr_list, "pause_ratio"),
+            "speech_rate_variation": avg(sr_list, "speech_rate_variation"),
+            "speech_rate_range": avg(sr_list, "speech_rate_range"),
+            "sudden_speed_changes": total(sr_list, "sudden_speed_changes"),
+        },
+        "pitch": {
+            "mean_pitch": avg(voiced_pitch_list, "mean_pitch"),
+            "std_pitch": avg(voiced_pitch_list, "std_pitch"),
+            "pitch_range": avg(voiced_pitch_list, "pitch_range"),
+            "pitch_change_rate": avg(voiced_pitch_list, "pitch_change_rate"),
+            "pitch_instability": avg(voiced_pitch_list, "pitch_instability"),
+            "pitch_trend": avg(voiced_pitch_list, "pitch_trend"),
+            "voiced_ratio": avg(voiced_pitch_list, "voiced_ratio"),
+            "valid_samples": total(pitch_list, "valid_samples"),
+        },
+        "volume": {
+            "mean_volume": avg(volume_list, "mean_volume"),
+            "std_volume": avg(volume_list, "std_volume"),
+            "volume_range": avg(volume_list, "volume_range"),
+            "volume_changes": total(volume_list, "volume_changes"),
+        },
+        "tremor": {
+            "jitter_local": avg(tremor_list, "jitter_local"),
+            "jitter_ppq5": avg(tremor_list, "jitter_ppq5"),
+            "shimmer_local": avg(tremor_list, "shimmer_local"),
+            "shimmer_apq5": avg(tremor_list, "shimmer_apq5"),
+            "hnr": avg(tremor_list, "hnr"),
+        },
+    }
+
+
 def summarize_acoustic_features(features: dict) -> str:
     """Human-readable summary for ChunkEvidence.acoustic_summary — this is what the LLM
     reasoning engine actually reads, not the raw dict."""

@@ -29,6 +29,14 @@ DEFAULT_MODEL_PATH = (
 )
 
 _model_cache: torch.nn.Module | None = None
+_device: torch.device | None = None
+
+
+def _select_device() -> torch.device:
+    global _device
+    if _device is None:
+        _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return _device
 
 
 def load_model(model_path: Path = DEFAULT_MODEL_PATH) -> torch.nn.Module:
@@ -58,6 +66,7 @@ def load_model(model_path: Path = DEFAULT_MODEL_PATH) -> torch.nn.Module:
         new_model.load_state_dict(model)
         model = new_model
     model.eval()
+    model.to(_select_device())
     _model_cache = model
     return model
 
@@ -70,6 +79,7 @@ def predict_emotion(
     not whole calls, so far fewer windows are ever actually needed.
     """
     model = load_model()
+    device = _select_device()
     total_duration = len(y) / sr
 
     if total_duration <= window_size:
@@ -85,13 +95,28 @@ def predict_emotion(
         x = np.expand_dims(x, axis=0)
         x = np.transpose(x, (0, 2, 1))
         with torch.no_grad():
-            predictions = model(torch.tensor(x, dtype=torch.float32))
+            predictions = model(torch.tensor(x, dtype=torch.float32, device=device))
             probabilities = torch.softmax(predictions, dim=1)
-        window_probabilities.append(probabilities.squeeze(0).numpy())
+        window_probabilities.append(probabilities.squeeze(0).cpu().numpy())
 
     avg_probabilities = np.mean(window_probabilities, axis=0)
     predicted_emotion = EMOTION_LABELS[int(np.argmax(avg_probabilities))]
     return predicted_emotion, {label: float(p) for label, p in zip(EMOTION_LABELS, avg_probabilities)}
+
+
+def aggregate_emotion(probs_list: list[dict[str, float]]) -> dict[str, float]:
+    """Average per-chunk emotion probability distributions into one call-level distribution —
+    used once at call end (pipeline/chunk_worker.py's run_final_analysis) now that the
+    reasoning engine runs once per call instead of once per chunk. Plain unweighted mean
+    across chunks; TIMNet is already demoted to soft evidence (module docstring), so this
+    doesn't need to be more sophisticated than "how much of the call, on average, read as
+    each emotion."
+    """
+    if not probs_list:
+        return {label: 0.0 for label in EMOTION_LABELS}
+    return {
+        label: float(np.mean([p[label] for p in probs_list])) for label in EMOTION_LABELS
+    }
 
 
 def summarize_emotion(probabilities: dict[str, float]) -> str:

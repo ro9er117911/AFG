@@ -1,7 +1,9 @@
-"""pipeline/call_state.py's alert debounce state machine — see docs/DESIGN.md §2.4. These are
-exactly the scenarios reasoned through there: a single noisy chunk must not fire a general
-alert, sustained/rising risk across >=debounce_chunks consecutive chunks should, and hard
-triggers bypass debouncing entirely but still don't re-fire while already showing.
+"""pipeline/call_state.py — the live keyword hard-trigger check (check_live_hard_trigger,
+no LLM, runs on every chunk) and the single end-of-call alert evaluation
+(apply_final_result, runs once after the one-shot reasoning pipeline). See that module's
+docstring for why there's no more per-chunk-debounce logic: that existed specifically to stop
+one noisy per-chunk LLM verdict from firing an alert alone, and there's only one verdict per
+call now.
 """
 
 from antifraud_v3.pipeline.call_state import CallState
@@ -20,42 +22,35 @@ def make_result(risk_level="low", hard_trigger_fired=False, trigger_name="OTP要
     )
 
 
-def test_single_elevated_chunk_does_not_alert():
-    cs = CallState(debounce_chunks=2)
-    alert = cs.record_chunk("t1", None, make_result(risk_level="medium"))
+# ---- apply_final_result: the single end-of-call verdict ----
+
+
+def test_low_risk_final_result_does_not_alert():
+    cs = CallState()
+    alert = cs.apply_final_result(make_result(risk_level="low"))
     assert alert is None
-    assert cs.alert_state == "watching"
-
-
-def test_sustained_elevated_chunks_trigger_alert():
-    cs = CallState(debounce_chunks=2)
-    assert cs.record_chunk("t1", None, make_result(risk_level="medium")) is None
-    alert = cs.record_chunk("t2", None, make_result(risk_level="high"))
-    assert alert is not None
-    assert alert.reason == "sustained_risk"
-    assert cs.alert_state == "alert_issued"
-
-
-def test_low_risk_chunk_resets_the_streak():
-    cs = CallState(debounce_chunks=2)
-    cs.record_chunk("t1", None, make_result(risk_level="medium"))
-    cs.record_chunk("t2", None, make_result(risk_level="low"))  # streak should reset to 0
-    alert = cs.record_chunk("t3", None, make_result(risk_level="medium"))
-    assert alert is None  # only 1 consecutive elevated chunk since the reset
-    assert cs.alert_state == "watching"
-
-
-def test_three_low_risk_chunks_never_alert():
-    cs = CallState(debounce_chunks=2)
-    for i in range(5):
-        alert = cs.record_chunk(f"t{i}", None, make_result(risk_level="low"))
-        assert alert is None
     assert cs.alert_state == "none"
 
 
-def test_hard_trigger_fires_immediately_even_with_high_debounce():
-    cs = CallState(debounce_chunks=5)  # would otherwise need 5 elevated chunks
-    alert = cs.record_chunk("t1", None, make_result(risk_level="low", hard_trigger_fired=True))
+def test_medium_risk_final_result_does_not_alert():
+    # A final analysis isn't live protection — only "high" or an explicit hard-trigger hit
+    # is severe enough to surface as an alert after the call has already ended.
+    cs = CallState()
+    alert = cs.apply_final_result(make_result(risk_level="medium"))
+    assert alert is None
+
+
+def test_high_risk_final_result_alerts():
+    cs = CallState()
+    alert = cs.apply_final_result(make_result(risk_level="high"))
+    assert alert is not None
+    assert alert.reason == "final_analysis"
+    assert cs.alert_state == "alert_issued"
+
+
+def test_hard_trigger_in_final_result_alerts_even_at_low_risk_level():
+    cs = CallState()
+    alert = cs.apply_final_result(make_result(risk_level="low", hard_trigger_fired=True))
     assert alert is not None
     assert alert.reason == "hard_trigger"
     assert alert.trigger_name == "OTP要求"
@@ -63,41 +58,69 @@ def test_hard_trigger_fires_immediately_even_with_high_debounce():
     assert cs.alert_state == "alert_issued"
 
 
-def test_hard_trigger_does_not_refire_while_alert_still_issued():
-    cs = CallState(debounce_chunks=5)
-    first = cs.record_chunk("t1", None, make_result(risk_level="low", hard_trigger_fired=True))
+def test_apply_final_result_records_transcript_free_risk_point():
+    cs = CallState()
+    cs.apply_final_result(make_result(risk_level="medium"))
+    assert len(cs.risk_trajectory) == 1
+    assert cs.risk_trajectory[0].risk_level == "medium"
+    assert cs.case_memory == "test memory"
+
+
+def test_apply_final_result_timestamp_override():
+    cs = CallState()
+    cs.apply_final_result(make_result(), timestamp=42.5)
+    assert cs.risk_trajectory[-1].timestamp == 42.5
+
+
+def test_apply_final_result_default_timestamp_is_wall_clock():
+    cs = CallState()
+    cs.apply_final_result(make_result())
+    assert cs.risk_trajectory[-1].timestamp >= 0.0
+    assert cs.risk_trajectory[-1].timestamp < 5.0  # should be near-instant in a test
+
+
+def test_apply_final_result_does_not_refire_if_a_live_hard_trigger_already_alerted():
+    cs = CallState()
+    first = cs.check_live_hard_trigger("請提供驗證碼給我")
     assert first is not None
-    second = cs.record_chunk("t2", None, make_result(risk_level="low", hard_trigger_fired=True))
-    assert second is None  # same alert still showing — not re-fired every subsequent chunk
+    second = cs.apply_final_result(make_result(risk_level="high"))
+    assert second is None  # already showing — the call already got its one alert
 
 
-def test_sustained_alert_does_not_refire_while_issued():
-    cs = CallState(debounce_chunks=1)
-    first = cs.record_chunk("t1", None, make_result(risk_level="high"))
-    assert first is not None
-    second = cs.record_chunk("t2", None, make_result(risk_level="high"))
-    assert second is None
+# ---- check_live_hard_trigger: the cheap no-LLM keyword check ----
 
 
-def test_acknowledge_alert_rearms_sustained_risk_path():
-    cs = CallState(debounce_chunks=1)
-    first = cs.record_chunk("t1", None, make_result(risk_level="high"))
-    assert first is not None
-    cs.acknowledge_alert()
-    assert cs.alert_state == "resolved"
-    second = cs.record_chunk("t2", None, make_result(risk_level="high"))
-    assert second is not None
+def test_live_hard_trigger_matches_a_keyword():
+    cs = CallState()
+    alert = cs.check_live_hard_trigger("我們需要幫你圈存帳戶，請提供驗證碼")
+    assert alert is not None
+    assert alert.reason == "hard_trigger"
     assert cs.alert_state == "alert_issued"
 
 
-def test_acknowledge_alert_rearms_hard_trigger_path():
-    cs = CallState(debounce_chunks=5)
-    first = cs.record_chunk("t1", None, make_result(risk_level="low", hard_trigger_fired=True))
+def test_live_hard_trigger_does_not_match_ordinary_speech():
+    cs = CallState()
+    alert = cs.check_live_hard_trigger("我們晚上要不要一起吃飯")
+    assert alert is None
+    assert cs.alert_state == "none"
+
+
+def test_live_hard_trigger_does_not_refire_while_alert_still_issued():
+    cs = CallState()
+    first = cs.check_live_hard_trigger("請提供驗證碼")
+    assert first is not None
+    second = cs.check_live_hard_trigger("再說一次驗證碼")
+    assert second is None  # same alert still showing — not re-fired every subsequent chunk
+
+
+def test_acknowledge_alert_rearms_live_hard_trigger_path():
+    cs = CallState()
+    first = cs.check_live_hard_trigger("請提供驗證碼")
     assert first is not None
     cs.acknowledge_alert()
-    second = cs.record_chunk("t2", None, make_result(risk_level="low", hard_trigger_fired=True))
+    assert cs.alert_state == "resolved"
+    second = cs.check_live_hard_trigger("再一次要求驗證碼")
     assert second is not None
-    assert second.reason == "hard_trigger"
 
 
 def test_acknowledge_alert_is_a_no_op_when_no_alert_issued():
@@ -106,31 +129,32 @@ def test_acknowledge_alert_is_a_no_op_when_no_alert_issued():
     assert cs.alert_state == "none"
 
 
-def test_record_chunk_appends_transcript_and_risk_trajectory():
+# ---- record_chunk_signals: per-chunk transcript/acoustic/emotion, no LLM ----
+
+
+def test_record_chunk_signals_appends_transcript_and_chunk_signals():
     cs = CallState()
-    cs.record_chunk("hello world", "caller", make_result(risk_level="low"))
+    features = {"pitch": {"mean_pitch": 200.0}, "volume": {"mean_volume": 0.5}, "speech_rate": {"speech_rate_variation": 0.1}}
+    cs.record_chunk_signals("hello world", "caller", features, {"neutral": 0.9})
     assert len(cs.transcript) == 1
     assert cs.transcript[0].text == "hello world"
     assert cs.transcript[0].speaker == "caller"
-    assert len(cs.risk_trajectory) == 1
-    assert cs.risk_trajectory[0].risk_level == "low"
-    assert cs.case_memory == "test memory"
+    assert len(cs.chunk_signals) == 1
+    assert cs.chunk_signals[0].acoustic_features == features
+    assert cs.chunk_signals[0].emotion_probs == {"neutral": 0.9}
 
 
-def test_record_chunk_timestamp_override_used_for_batch_upload():
-    """See CallState.record_chunk()'s docstring — server/upload.py passes an explicit
+def test_record_chunk_signals_timestamp_override_used_for_batch_upload():
+    """See CallState.record_chunk_signals()'s docstring — server/upload.py passes an explicit
     timestamp (position within the uploaded audio) instead of wall-clock elapsed time."""
     cs = CallState()
-    cs.record_chunk("t1", None, make_result(), timestamp=42.5)
+    features = {"pitch": {}, "volume": {}, "speech_rate": {}}
+    cs.record_chunk_signals("t1", None, features, {}, timestamp=42.5)
     assert cs.transcript[-1].timestamp == 42.5
-    assert cs.risk_trajectory[-1].timestamp == 42.5
+    assert cs.chunk_signals[-1].timestamp == 42.5
 
 
-def test_record_chunk_default_timestamp_is_wall_clock():
-    cs = CallState()
-    cs.record_chunk("t1", None, make_result())
-    assert cs.risk_trajectory[-1].timestamp >= 0.0
-    assert cs.risk_trajectory[-1].timestamp < 5.0  # should be near-instant in a test
+# ---- baseline (unchanged behavior, still exercised through the new entry points) ----
 
 
 def test_baseline_not_set_before_window_elapses():

@@ -3,26 +3,31 @@ chunking + per-chunk pipeline the live WebSocket path uses (audio/vad.py,
 pipeline/chunk_worker.py), for a user checking a recording after the fact rather than during
 a live call.
 
-Deliberately synchronous, not streamed over a WebSocket like server/ws.py: batch processing a
-single pre-recorded call isn't latency-sensitive the way live capture is (docs/DESIGN.md §5's
-whole reason for the WebSocket path is "warn *during* the call"), so reusing that incremental
-push machinery here would just be a second state machine to maintain for no real benefit. The
-client gets one response with the full transcript + risk trajectory + alerts once processing
-finishes.
+Streamed as newline-delimited JSON (NDJSON), not one big JSON response at the end: per-chunk
+ASR/acoustic/emotion results (and any live keyword hard-trigger alert) are pushed to the
+client as soon as each utterance is processed, and the one-shot LLM final analysis — which can
+take tens of seconds — arrives last as its own event. Mirrors server/ws.py's message
+vocabulary (chunk_update/alert/final_analysis) so the frontend renders both the same way. A
+plain single-JSON response would mean showing the user nothing at all until the slowest part
+(the LLM call) finishes, which defeats the point of computing the fast local signals first.
 """
 
+import asyncio
 import dataclasses
 import io
+import json
 import logging
+from collections.abc import AsyncGenerator
 
 import numpy as np
 import soundfile as sf
 from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 
 from ..audio.vad import VADChunker
-from ..llm import LLMProviderError, get_llm_provider
+from ..llm import LLMProvider, LLMProviderError, get_llm_provider
 from ..pipeline.call_state import CallState
-from ..pipeline.chunk_worker import process_chunk
+from ..pipeline.chunk_worker import process_chunk_signals, run_final_analysis
 from ..storage import history
 from ..storage.settings_store import load_settings
 
@@ -64,6 +69,88 @@ def _decode_audio(raw: bytes, filename: str) -> np.ndarray:
     return y.astype(np.float32)
 
 
+async def stream_pipeline_over_audio(
+    y: np.ndarray, provider: LLMProvider, call_state: CallState, hard_triggers: list[str]
+) -> AsyncGenerator[dict, None]:
+    """VAD-chunk a whole pre-recorded/local audio array, run process_chunk_signals over each
+    utterance in order (ASR + acoustic + emotion + live keyword hard-trigger check — no LLM),
+    yielding one event dict per result, then run_final_analysis once over the whole thing.
+    Shared by /api/upload-call and the Test Data screen's /api/test-clips/.../analyze
+    (server/testdata.py) — same pipeline, the only difference is where the audio bytes came
+    from and what happens with the result afterward (history persistence vs. not, see each
+    router function).
+
+    Each process_chunk_signals/run_final_analysis call is blocking CPU work (whisper,
+    parselmouth, TIMNet, the `claude` CLI subprocess) — run off the event loop via
+    asyncio.to_thread so a slow upload doesn't stall the whole server, same reasoning as
+    server/ws.py's _handle_chunk.
+
+    VADChunker strips silence between utterances, so the sum of chunk lengths processed so far
+    isn't exactly "position in the original file" (it omits silence-gap duration) — but it's a
+    reasonable monotonically-increasing approximation of "roughly when in the recording this
+    was said," which is all the transcript timestamps need to be useful for a post-hoc review.
+    See CallState.record_chunk_signals()'s docstring for why an explicit timestamp is passed
+    here instead of relying on its wall-clock default.
+    """
+    chunker = VADChunker(sample_rate=SAMPLE_RATE)
+    chunks = chunker.push_audio(y)
+    tail = chunker.flush()
+    if tail is not None and len(tail) > 0:
+        chunks.append(tail)
+
+    audio_position_s = 0.0
+    for chunk in chunks:
+        result = await asyncio.to_thread(
+            process_chunk_signals, chunk, SAMPLE_RATE, call_state, None, audio_position_s
+        )
+        audio_position_s += len(chunk) / SAMPLE_RATE
+        if result is None:
+            continue
+        yield {
+            "type": "chunk_update",
+            "timestamp": call_state.transcript[-1].timestamp,
+            "transcript_text": result.transcript_text,
+            "acoustic": result.acoustic,
+            "emotion": result.emotion,
+        }
+        if result.alert is not None:
+            yield {"type": "alert", **dataclasses.asdict(result.alert)}
+
+    outcome = await asyncio.to_thread(
+        run_final_analysis, provider, call_state, hard_triggers, audio_position_s
+    )
+    if outcome is None:
+        return  # nothing was ever transcribed — nothing to analyze
+
+    result, alert, evidence = outcome
+    yield {
+        "type": "final_analysis",
+        "risk_level": result.risk_level,
+        "chunk_risk_score": result.chunk_risk_score,
+        "justification": result.justification,
+        "evidence": {
+            "transcript_segment": evidence.transcript_segment,
+            "acoustic_summary": evidence.acoustic_summary,
+            "emotion_summary": evidence.emotion_summary,
+        },
+    }
+    if alert is not None:
+        yield {"type": "alert", **dataclasses.asdict(alert)}
+
+
+def final_risk_level(call_state: CallState) -> str:
+    levels_by_severity = {"low": 0, "medium": 1, "high": 2}
+    level = "low"
+    for point in call_state.risk_trajectory:
+        if levels_by_severity.get(point.risk_level, 0) > levels_by_severity.get(level, 0):
+            level = point.risk_level
+    return level
+
+
+def _ndjson_line(event: dict) -> bytes:
+    return (json.dumps(event, ensure_ascii=False) + "\n").encode("utf-8")
+
+
 @router.post("/upload-call")
 async def upload_call(file: UploadFile = File(...)):
     raw = await file.read()
@@ -77,63 +164,38 @@ async def upload_call(file: UploadFile = File(...)):
     except LLMProviderError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
 
-    call_state = CallState(debounce_chunks=settings["debounce_chunks"])
-    chunker = VADChunker(sample_rate=SAMPLE_RATE)
-
+    call_state = CallState()
     call_id = history.create_call(source="upload")
+    duration_seconds = len(y) / SAMPLE_RATE
 
-    chunks = chunker.push_audio(y)
-    tail = chunker.flush()
-    if tail is not None and len(tail) > 0:
-        chunks.append(tail)
-
-    # VADChunker strips silence between utterances, so the sum of chunk lengths processed so
-    # far isn't exactly "position in the original file" (it omits silence-gap duration) — but
-    # it's a reasonable monotonically-increasing approximation of "roughly when in the
-    # recording this was said," which is all the transcript timestamps need to be useful for
-    # a post-hoc review. See CallState.record_chunk()'s docstring for why an explicit
-    # timestamp is passed here instead of relying on its wall-clock default.
-    audio_position_s = 0.0
-    alerts: list[dict] = []
-
-    try:
-        for chunk in chunks:
-            result = process_chunk(
-                chunk,
-                SAMPLE_RATE,
-                provider,
-                call_state,
-                None,
-                settings["hard_triggers"],
-                timestamp=audio_position_s,
+    async def event_stream() -> AsyncGenerator[bytes, None]:
+        # Once streaming starts, the HTTP status is already committed (200) — an error partway
+        # through can no longer become a 502 the way the old single-JSON-response version did.
+        # It's signaled in-band as a "error" event instead, same pattern as server/ws.py.
+        alerts: list[dict] = []
+        try:
+            async for event in stream_pipeline_over_audio(y, provider, call_state, settings["hard_triggers"]):
+                if event["type"] == "alert":
+                    alerts.append({k: v for k, v in event.items() if k != "type"})
+                yield _ndjson_line(event)
+        except LLMProviderError as e:
+            logger.warning("reasoning pipeline failed while analyzing uploaded call: %s", e)
+            history.finish_call(
+                call_id, call_state, ended_reason="error", duration_seconds=duration_seconds, alerts=alerts
             )
-            audio_position_s += len(chunk) / SAMPLE_RATE
-            if result is None:
-                continue
-            if result.alert is not None:
-                alerts.append(dataclasses.asdict(result.alert))
-    except LLMProviderError as e:
-        logger.warning("reasoning pipeline failed while analyzing uploaded call: %s", e)
+            yield _ndjson_line({"type": "error", "message": str(e)})
+            return
+
         history.finish_call(
-            call_id, call_state, ended_reason="error", duration_seconds=len(y) / SAMPLE_RATE
+            call_id, call_state, ended_reason="uploaded", duration_seconds=duration_seconds, alerts=alerts
         )
-        raise HTTPException(status_code=502, detail=str(e)) from e
+        yield _ndjson_line(
+            {
+                "type": "done",
+                "call_id": call_id,
+                "duration_seconds": duration_seconds,
+                "final_risk_level": final_risk_level(call_state),
+            }
+        )
 
-    history.finish_call(
-        call_id, call_state, ended_reason="uploaded", duration_seconds=len(y) / SAMPLE_RATE
-    )
-
-    levels_by_severity = {"low": 0, "medium": 1, "high": 2}
-    final_risk_level = "low"
-    for point in call_state.risk_trajectory:
-        if levels_by_severity.get(point.risk_level, 0) > levels_by_severity.get(final_risk_level, 0):
-            final_risk_level = point.risk_level
-
-    return {
-        "call_id": call_id,
-        "duration_seconds": len(y) / SAMPLE_RATE,
-        "final_risk_level": final_risk_level,
-        "transcript": [dataclasses.asdict(t) for t in call_state.transcript],
-        "risk_trajectory": [dataclasses.asdict(r) for r in call_state.risk_trajectory],
-        "alerts": alerts,
-    }
+    return StreamingResponse(event_stream(), media_type="application/x-ndjson")
