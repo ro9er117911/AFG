@@ -32,7 +32,10 @@ def test_empty_hard_trigger_list_is_respected_not_replaced_with_defaults():
     assert "立即示警關鍵字清單" in prompt
 
 
-def test_prompt_contains_risk_level_rules():
+def test_prompt_tells_claude_not_to_redecide_the_verdict():
+    """Two-line fusion architecture (reasoning/fusion.py): risk_level/fraud_type are now decided
+    by fuse(), not by this prompt's own instructions — the prompt should say so explicitly,
+    rather than still walking through high/medium/low classification rules that no longer apply
+    to what this step actually does (hard-trigger checklist + prose only)."""
     prompt = build_synthesize_system_prompt(None)
-    assert "risk_level" in prompt
-    assert "high" in prompt and "medium" in prompt and "low" in prompt
+    assert "不是" in prompt and "風險等級" in prompt

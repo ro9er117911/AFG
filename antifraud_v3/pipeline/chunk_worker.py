@@ -1,7 +1,8 @@
 """Two entry points, deliberately split:
 
 - process_chunk_signals(): runs on every completed VAD chunk, in real time. ASR + acoustic
-  features + emotion + a cheap keyword-based hard-trigger check — no LLM call. This is what
+  features + emotion + Line 1 AI/cloned-voice scoring (detectors/deepfake_voice.py) + a cheap
+  keyword-based hard-trigger check — no LLM call. This is what
   keeps the live/streaming experience actually real-time and free, per the project's current
   budget constraint (no paid ANTHROPIC_API_KEY — see llm/claude_code_provider.py). The result
   carries a compact numeric acoustic/emotion snapshot so callers (server/ws.py,
@@ -15,17 +16,28 @@
   LLM, so callers can show the user what the AI actually saw, not just its verdict.
 """
 
+import logging
 from dataclasses import dataclass
 
 import numpy as np
 
+from .. import config
 from ..asr.transcribe import transcribe_chunk
+from ..audio.egemaps import aggregate_egemaps, extract_egemaps, summarize_egemaps_highlight
 from ..audio.emotion import aggregate_emotion, predict_emotion, summarize_emotion
 from ..audio.features import aggregate_acoustic_features, extract_acoustic_features, summarize_acoustic_features
-from ..llm.base import LLMProvider
+from ..detectors.deepfake_voice import aggregate_deepfake, predict_deepfake, unload_model as unload_deepfake_model
+from ..detectors.scam_semantic import ScamSemanticError, classify_call
+from ..detectors.scam_semantic import unload_model as unload_scam_semantic_model
+from ..detectors.scam_semantic_llm import classify_call_via_llm
+from ..llm.base import LLMProvider, LLMProviderError
 from ..reasoning import run_reasoning_pipeline
+from ..reasoning.fusion import build_synthesize_result, fuse
 from ..reasoning.schemas import ChunkEvidence, SynthesizeResult
+from ..storage.settings_store import load_settings
 from .call_state import Alert, CallState
+
+logger = logging.getLogger(__name__)
 
 
 def _compact_acoustic(features: dict) -> dict:
@@ -49,15 +61,35 @@ def _compact_emotion(label: str, probs: dict[str, float]) -> dict:
     return {"label": label, "top_prob": round(probs[label], 2)}
 
 
+def _compact_deepfake(result) -> dict:
+    return {"fake_score": round(result.fake_score, 3), "label": result.label}
+
+
+def _compact_egemaps(features: dict[str, float]) -> dict[str, float]:
+    """Unlike _compact_acoustic, this keeps all 88 dims, not a curated subset — the frontend's
+    baseline/z-score computation for the eGeMAPS detail panel follows the same "computed
+    client-side from data already pushed to this view" pattern as the existing 8-axis radar
+    (see frontend/app.js's RADAR_AXES comment), which needs the full per-key history, not just
+    audio/egemaps.py's EGEMAPS_HIGHLIGHT_KEYS subset. Rounded to 3dp — plenty of precision for
+    display, keeps the per-chunk WS/NDJSON payload reasonable (88 floats either way)."""
+    return {k: round(v, 3) for k, v in features.items()}
+
+
 @dataclass
 class ChunkSignalsResult:
     transcript_text: str
     acoustic: dict
     emotion: dict
+    deepfake: dict  # Line 1 (detectors/deepfake_voice.py) — {"fake_score": float, "label": str}
     alert: Alert | None  # from the live keyword hard-trigger check, not the LLM
     # Only non-None on the one chunk where CallState.maybe_set_baseline() just established it —
     # every other chunk carries None so callers don't resend/rechart an unchanged baseline.
     baseline: dict | None = None
+    egemaps: dict[str, float] | None = None  # all 88 eGeMAPSv02 functionals, see _compact_egemaps
+    # Companion to `baseline` above, same "only set on the establishing chunk" rule — kept
+    # separate rather than nested inside `baseline` since audio/egemaps.py's baseline is a
+    # distinct 88-key dict from audio/features.py's 10-key one (see CallState.egemaps_baseline).
+    egemaps_baseline: dict[str, float] | None = None
 
 
 def process_chunk_signals(
@@ -72,44 +104,66 @@ def process_chunk_signals(
     non-speech noise) — the caller (server/ws.py, server/upload.py) should skip pushing an
     update in that case.
 
-    timestamp is forwarded to CallState.record_chunk_signals() and maybe_set_baseline() — see
-    those methods' docstrings for why batch/upload callers need the override.
+    timestamp is forwarded to CallState.record_chunk_signals() — see that method's docstring for
+    why batch/upload callers need the override. (maybe_set_baseline() no longer takes a
+    timestamp — it gates on chunk count now, see its docstring.)
     """
     transcript_text = transcribe_chunk(y, sr)
     if not transcript_text:
         return None
 
     acoustic_features = extract_acoustic_features(y, sr)
-    baseline_just_set = call_state.maybe_set_baseline(acoustic_features, timestamp=timestamp)
+    egemaps_features = extract_egemaps(y, sr)
+    baseline_just_set = call_state.maybe_set_baseline(acoustic_features, egemaps_features)
     emotion_label, emotion_probs = predict_emotion(y, sr)
+    deepfake_result = predict_deepfake(y, sr)
 
     call_state.record_chunk_signals(
-        transcript_text, speaker_guess, acoustic_features, emotion_probs, timestamp=timestamp
+        transcript_text,
+        speaker_guess,
+        acoustic_features,
+        emotion_probs,
+        deepfake_result.fake_score,
+        y,
+        timestamp=timestamp,
+        egemaps_features=egemaps_features,
     )
     alert = call_state.check_live_hard_trigger(transcript_text)
     return ChunkSignalsResult(
         transcript_text=transcript_text,
         acoustic=_compact_acoustic(acoustic_features),
         emotion=_compact_emotion(emotion_label, emotion_probs),
+        deepfake=_compact_deepfake(deepfake_result),
         alert=alert,
         baseline=call_state.baseline if baseline_just_set else None,
+        egemaps=_compact_egemaps(egemaps_features),
+        egemaps_baseline=call_state.egemaps_baseline if baseline_just_set else None,
     )
 
 
 def run_final_analysis(
-    provider: LLMProvider,
+    provider: LLMProvider | None,
     call_state: CallState,
     hard_triggers: list[str] | None = None,
     timestamp: float | None = None,
 ) -> tuple[SynthesizeResult, Alert | None, ChunkEvidence] | None:
-    """Run discriminate -> reflect -> synthesize once over the whole accumulated call. Returns
-    None if nothing was ever transcribed (e.g. a silent/empty call) — there's nothing to
-    reason about. Call once, at call end (server/ws.py's call_socket finally-block,
-    server/upload.py's stream_pipeline_over_audio).
+    """Runs once, at call end (server/ws.py's call_socket finally-block, server/upload.py's
+    stream_pipeline_over_audio). Returns None if nothing was ever transcribed (e.g. a silent/
+    empty call) — there's nothing to reason about.
+
+    Two-line fusion architecture (see reasoning/fusion.py's module docstring): aggregates Line
+    1's (detectors/deepfake_voice.py) per-chunk fake_score, runs Line 2
+    (detectors/scam_semantic.py) once over the whole call's retained audio, fuses the two into
+    the authoritative verdict (fuse()), then optionally asks Claude (discriminate/reflect/
+    synthesize) only for hard-trigger evaluation + prose consistent with that verdict —
+    `provider` is now optional; a missing/failed LLM degrades to a template-fallback
+    justification (build_synthesize_result) rather than failing the whole analysis, since the
+    verdict itself no longer depends on the LLM at all.
 
     The returned ChunkEvidence is exactly what was sent to the LLM (discriminate.py builds its
     prompt straight from these fields) — callers surface it to the user so "what did you tell
-    the AI" isn't a black box.
+    the AI" isn't a black box. When provider is None or fails, evidence is still built (Line
+    1/2's fusion doesn't need it) so callers keep a consistent return shape.
     """
     if not call_state.transcript:
         return None
@@ -120,6 +174,11 @@ def run_final_analysis(
     acoustic_summary = summarize_acoustic_features(
         aggregate_acoustic_features([cs.acoustic_features for cs in call_state.chunk_signals])
     )
+    egemaps_list = [cs.egemaps_features for cs in call_state.chunk_signals if cs.egemaps_features]
+    if egemaps_list:
+        # Curated 10-key highlight only — the full 88 dims are for the UI's detail panel, not
+        # worth spending LLM prompt tokens on (see audio/egemaps.py's summarize_egemaps_highlight).
+        acoustic_summary += "；eGeMAPS：" + summarize_egemaps_highlight(aggregate_egemaps(egemaps_list))
     if call_state.audio_quality and call_state.audio_quality.get("narrowband"):
         # See audio/quality.py's detect_bandwidth — set by server/upload.py for pre-recorded
         # telephone-quality uploads (never for live mic calls). Appended as plain text into the
@@ -138,6 +197,49 @@ def run_final_analysis(
         emotion_summary=emotion_summary,
         call_state_summary="",
     )
-    result = run_reasoning_pipeline(provider, evidence, hard_triggers=hard_triggers)
+
+    fake_agg = aggregate_deepfake([cs.fake_score for cs in call_state.chunk_signals])
+    full_audio = (
+        np.concatenate(call_state.chunk_audio) if call_state.chunk_audio else np.zeros(0, dtype=np.float32)
+    )
+    line2_result = None
+    line2_backend = load_settings()["line2_backend"]
+    if line2_backend == "claude" and provider is not None:
+        # Text-only path (detectors/scam_semantic_llm.py) — reuses the same provider already
+        # resolved for the reasoning pipeline below, no GPU model load/unload at all. Default
+        # backend: meaningfully faster than Qwen2Audio's load+3-round-generate cost.
+        try:
+            line2_result = classify_call_via_llm(provider, full_transcript)
+        except ScamSemanticError:
+            logger.exception("Line 2 (claude backend) classification failed; falling back to Qwen2Audio")
+
+    if line2_result is None and len(full_audio) > 0:
+        # Reached when line2_backend=="qwen2audio", or as a fallback when the claude backend
+        # was selected but unavailable/failed (provider is None or classify_call_via_llm raised)
+        # — never silently give up on Line 2 just because the fast path wasn't usable this call.
+        #
+        # Frees Line 1's resident VRAM before Line 2 loads, and Line 2's after it's done —
+        # measured directly, both models resident together OOM on this project's GPU, in either
+        # loading order. See detectors/deepfake_voice.py's and detectors/scam_semantic.py's
+        # unload_model() docstrings for the full measurement and trade-off. try/finally so a
+        # failed classify_call() still frees Line 2's VRAM, not just a successful one.
+        unload_deepfake_model()
+        try:
+            line2_result = classify_call(full_audio, 16000, full_transcript)
+        except ScamSemanticError:
+            logger.exception("Line 2 (scam-semantic) classification failed; proceeding without it")
+        finally:
+            unload_scam_semantic_model()
+
+    fusion_result = fuse(fake_agg["max"], line2_result, config.DEEPFAKE_FAKE_SCORE_THRESHOLD)
+
+    claude_result = None
+    if provider is not None and load_settings().get("llm_final_summary_enabled", False):
+        try:
+            claude_result = run_reasoning_pipeline(provider, evidence, fusion_result, hard_triggers=hard_triggers)
+        except LLMProviderError:
+            logger.warning("Claude reasoning pipeline failed; falling back to template justification", exc_info=True)
+
+    result = build_synthesize_result(fusion_result, claude_result)
     alert = call_state.apply_final_result(result, timestamp=timestamp)
     return result, alert, evidence

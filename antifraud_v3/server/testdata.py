@@ -9,6 +9,7 @@ was just cleaned up from. Results only live in the HTTP response; the frontend h
 the duration of the tab visit.
 """
 
+import logging
 import time
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -21,10 +22,24 @@ from ..pipeline.call_state import CallState
 from ..storage.settings_store import load_settings
 from .upload import SAMPLE_RATE, _decode_audio, _ndjson_line, final_risk_level, stream_pipeline_over_audio
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/test-clips")
 
 CLIPS_DIR = Path(__file__).resolve().parent.parent / "eval" / "test_clips"
-CATEGORIES = ("benign", "scam")
+
+
+def _discover_categories() -> tuple[str, ...]:
+    """Any subdirectory of eval/test_clips/ containing at least one .wav is a category —
+    not hardcoded to ("benign", "scam") so dropping in a new folder (e.g. real human-voice
+    clips, or clips grouped by emotion) is enough to add a new section on the Test Data
+    screen, no code change needed. Sorted for a stable, predictable tab/section order."""
+    if not CLIPS_DIR.is_dir():
+        return ()
+    return tuple(sorted(p.name for p in CLIPS_DIR.iterdir() if p.is_dir() and any(p.glob("*.wav"))))
+
+
+CATEGORIES = _discover_categories()
 
 
 def _safe_clip_path(category: str, filename: str) -> Path:
@@ -58,10 +73,14 @@ def analyze_test_clip(category: str, filename: str):
     y, quality = _decode_audio(path.read_bytes(), filename)
 
     settings = load_settings()
+    # A missing/misconfigured Claude provider is no longer fatal (two-line fusion architecture,
+    # see reasoning/fusion.py) — proceed with provider=None, run_final_analysis's fallback
+    # template still produces a verdict from Line 1/2's fusion result alone.
     try:
         provider = get_llm_provider()
     except LLMProviderError as e:
-        raise HTTPException(status_code=502, detail=str(e)) from e
+        logger.warning("could not get an LLM provider for test-clip analysis, proceeding without it: %s", e)
+        provider = None
 
     call_state = CallState()
     call_state.audio_quality = quality
@@ -69,11 +88,15 @@ def analyze_test_clip(category: str, filename: str):
     start = time.monotonic()
 
     async def event_stream() -> AsyncGenerator[bytes, None]:
+        # Broad except, not just LLMProviderError — see server/upload.py's event_stream for why
+        # (an uncaught exception partway through streaming otherwise just drops the connection,
+        # which surfaces to the browser as an opaque "network error" instead of a real message).
         try:
             async for event in stream_pipeline_over_audio(y, provider, call_state, settings["hard_triggers"]):
                 yield _ndjson_line(event)
-        except LLMProviderError as e:
-            yield _ndjson_line({"type": "error", "message": str(e)})
+        except Exception as e:
+            logger.exception("pipeline failed while analyzing test clip %s/%s", category, filename)
+            yield _ndjson_line({"type": "error", "message": str(e) or e.__class__.__name__})
             return
 
         yield _ndjson_line(

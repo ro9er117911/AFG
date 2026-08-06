@@ -44,11 +44,15 @@ Wu et al. 2018；Ekman 2004）。**平靜、中性的語氣本身不是證據**�
 """
 
 # TeleAntiFraud-28k's 7-category fraud-type taxonomy (Ma et al., ACM MM 2025 — see
-# ../../references/05-teleantifraud.md), used for the descriptive fraud_type classification in
-# SynthesizeResult. Independent of SCAM_KILL_CHAIN_RUBRIC above: that rubric asks "which stage
-# of the scam process is this call in", this taxonomy asks "what kind of scam narrative does
-# it resemble" — a call can be risk_level=medium with a clearly-identifiable fraud_type, or
-# risk_level=high with fraud_type=unclassified if the narrative doesn't fit any of the 7.
+# ../../references/05-teleantifraud.md). Independent of SCAM_KILL_CHAIN_RUBRIC above: that
+# rubric asks "which stage of the scam process is this call in", this taxonomy asks "what kind
+# of scam narrative does it resemble".
+#
+# No longer fed into any live LLM prompt (reference/documentation only) — since the two-line
+# fusion architecture (reasoning/fusion.py), fraud_type classification comes from
+# detectors/scam_semantic.py's Line 2 output via map_fraud_type(), not from Claude's own
+# judgment, so this text has no synthesize()-prompt consumer anymore. Kept as the canonical
+# Chinese description of each FraudType (schemas.py) category for anyone reading the taxonomy.
 FRAUD_TYPE_TAXONOMY = """\
 ## 詐騙類型分類（與上面的階段判斷是不同維度，彼此獨立）
 
@@ -114,29 +118,46 @@ REFLECT_SYSTEM_PROMPT = """你是同一個詐騙偵測系統裡的「反思」�
 如果經過反思後這個證據還是站得住腳（尤其是階段三、四這種有明確語句可引用的），維持原本的強度，不用為了
 「顯得有在反思」而硬降。"""
 
+LINE2_LLM_SYSTEM_PROMPT = f"""你是「話術詐騙偵測」模型（Line 2），只根據電話逐字稿的文字內容判斷這通電話是不是詐騙——
+你看不到音檔，只有文字，不要臆測聲音特徵。這是 detectors/scam_semantic.py 原本用本機 Qwen2Audio
+模型做的同一件事，現在改由你純文字判斷，輸出格式必須相容。
+
+{FRAUD_TYPE_TAXONOMY}
+
+請輸出：
+- scenario：這通電話大致屬於什麼日常情境（例如客服來電、外送、銀行來電等），一兩個詞即可。
+- is_fraud：這通電話的話術內容是否構成詐騙。
+- confidence：對 is_fraud 判斷的信心程度，0 到 1 之間的數字。
+- fraud_type：is_fraud 為 true 時，從上面 7 類詐騙類型中選最符合的一個；is_fraud 為 false 時填
+  unclassified。"""
+
+
 def build_synthesize_system_prompt(hard_triggers: list[str] | None = None) -> str:
     """hard_triggers is a parameter, not a module constant, so it can come from the live
     settings store (storage/settings_store.py, wired via the Settings screen) rather than
     being frozen at import time — see docs/DESIGN.md §9's settings chip list.
+
+    NOTE (two-line fusion architecture, see reasoning/fusion.py): risk_level/chunk_risk_score/
+    fraud_type are no longer decided here — reasoning/fusion.py's fuse() already decided them
+    from the two audio-native detectors' output before this prompt ever runs, and the caller
+    (reasoning/synthesize.py) tells you that decision in the user_content. Your job shrank to
+    exactly two things: evaluate the hard-trigger checklist, and write justification/
+    case-memory prose *consistent with* the decision you're given, not a fresh one.
     """
     triggers = hard_triggers if hard_triggers is not None else DEFAULT_HARD_TRIGGERS
     trigger_lines = "\n".join(f"- {t}" for t in triggers)
-    return f"""你是詐騙偵測系統的「綜合」步驟，根據反思後的階段證據 + 立即示警關鍵字清單，
-產出這通電話唯一一次的最終風險評估（整通電話結束後才跑一次，不是逐句判斷），並額外做一個獨立的
-詐騙類型分類。
+    return f"""你是詐騙偵測系統的「綜合」步驟。這通電話的風險等級與詐騙類型已經由另外兩個專用的音訊模型
+（AI合成語音偵測、話術詐騙語意偵測）判斷完畢，會在使用者訊息裡告訴你這個結論——你的工作**不是**重新
+判斷風險等級或詐騙類型，而是：
+1. 根據反思後的階段證據，評估立即示警關鍵字清單是否命中。
+2. 寫出跟系統結論一致、具體可讀的說明文字與案件摘要。
 
-立即示警關鍵字清單（整通電話中只要出現任一項，即使只有一句話，也可以判定 risk_level=high）：
+立即示警關鍵字清單：
 {trigger_lines}
 
-{FRAUD_TYPE_TAXONOMY}
-
-risk_level 的判斷：
-- high：命中任一立即示警關鍵字，或多個階段證據都達到 strong。
-- medium：至少一個階段證據達到 moderate 以上，但沒有命中立即示警關鍵字。
-- low：其餘情況，包含所有階段都是 none/weak 的正常對話。
-
 justification 要具體、可以直接顯示給使用者看，不要只寫「風險偏高」這種空話——
-要講清楚「為什麼」，例如「對方要求提供簡訊驗證碼，這是常見盜刷手法」。
+要講清楚「為什麼」，並且要跟使用者訊息裡給你的系統判斷結論一致，不能自相矛盾
+（例如系統結論是高風險，你的說明文字不能寫「這通電話看起來正常」）。
 
 case_memory_update 是這通電話的簡短案件摘要，記錄目前為止已經確立的事實
 （例如「對方自稱銀行，已要求提供帳號一次」），不用重複整段逐字稿。"""

@@ -10,11 +10,12 @@ from antifraud_v3.reasoning.reflect import reflect
 from antifraud_v3.reasoning.rubric import DEFAULT_HARD_TRIGGERS
 from antifraud_v3.reasoning.schemas import (
     ChunkEvidence,
+    ClaudeJustification,
     DiscriminateResult,
+    FusionResult,
     ReflectedStage,
     ReflectResult,
     StageEvidence,
-    SynthesizeResult,
 )
 from antifraud_v3.tests.conftest import DEFAULT_FRAUD_TYPE, FakeLLMProvider
 
@@ -26,6 +27,22 @@ def make_evidence(text="測試逐字稿"):
         acoustic_summary="語速正常，音量穩定",
         emotion_summary="neutral 0.8, happy 0.1",
         call_state_summary="",
+    )
+
+
+def make_fusion(risk_level="low", is_fraud=False, fusion_source="none"):
+    """run_reasoning_pipeline no longer decides risk_level/fraud_type itself (see
+    reasoning/fusion.py) — it's handed a FusionResult as context. These reasoning-pipeline
+    wiring tests only care that the pipeline chains correctly and returns the LLM's prose, so a
+    minimal fixture is enough; fusion.py's own decision logic has its own tests."""
+    return FusionResult(
+        fusion_source=fusion_source,
+        fake_score=0.0,
+        ai_voice_flag=False,
+        is_fraud=is_fraud,
+        risk_level=risk_level,
+        chunk_risk_score=90 if risk_level == "high" else 2,
+        fraud_type=DEFAULT_FRAUD_TYPE,
     )
 
 
@@ -80,26 +97,24 @@ class ScamScriptedProvider(FakeLLMProvider):
                     )
                 ]
             )
-        if schema is SynthesizeResult:
-            return self._synthesize_result
+        if schema is ClaudeJustification:
+            return self._claude_justification
         raise AssertionError(f"unexpected schema {schema}")
 
 
 def test_run_reasoning_pipeline_chains_all_three_steps_in_order():
     provider = ScamScriptedProvider(
-        synthesize_result=SynthesizeResult(
-            risk_level="high",
-            chunk_risk_score=90,
+        claude_justification=ClaudeJustification(
             hard_triggers=[],
             justification="要求提供驗證碼",
             case_memory_update="已要求驗證碼一次",
-            fraud_type=DEFAULT_FRAUD_TYPE,
         )
     )
-    result = run_reasoning_pipeline(provider, make_evidence("請提供簡訊驗證碼"), hard_triggers=DEFAULT_HARD_TRIGGERS)
+    result = run_reasoning_pipeline(
+        provider, make_evidence("請提供簡訊驗證碼"), make_fusion(risk_level="high"), hard_triggers=DEFAULT_HARD_TRIGGERS
+    )
 
-    assert [c[0] for c in provider.calls] == ["DiscriminateResult", "ReflectResult", "SynthesizeResult"]
-    assert result.risk_level == "high"
+    assert [c[0] for c in provider.calls] == ["DiscriminateResult", "ReflectResult", "ClaudeJustification"]
     assert result.case_memory_update == "已要求驗證碼一次"
 
 
@@ -108,17 +123,14 @@ def test_run_reasoning_pipeline_low_risk_path_still_calls_all_steps():
     # nothing was flagged (tested above) — synthesize always runs since it also evaluates
     # hard triggers independently of stage evidence.
     fake = FakeLLMProvider(
-        synthesize_result=SynthesizeResult(
-            risk_level="low",
-            chunk_risk_score=2,
+        claude_justification=ClaudeJustification(
             hard_triggers=[],
             justification="正常對話",
             case_memory_update="",
-            fraud_type=DEFAULT_FRAUD_TYPE,
         )
     )
-    result = run_reasoning_pipeline(fake, make_evidence("我們晚上要不要一起吃飯"))
-    assert result.risk_level == "low"
+    result = run_reasoning_pipeline(fake, make_evidence("我們晚上要不要一起吃飯"), make_fusion(risk_level="low"))
+    assert result.justification == "正常對話"
     called_schemas = [c[0] for c in fake.calls]
     assert "DiscriminateResult" in called_schemas
-    assert "SynthesizeResult" in called_schemas
+    assert "ClaudeJustification" in called_schemas

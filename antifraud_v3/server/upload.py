@@ -121,7 +121,10 @@ async def stream_pipeline_over_audio(
             "transcript_text": result.transcript_text,
             "acoustic": result.acoustic,
             "emotion": result.emotion,
+            "deepfake": result.deepfake,
             "baseline": result.baseline,
+            "egemaps": result.egemaps,
+            "egemaps_baseline": result.egemaps_baseline,
         }
         if result.alert is not None:
             yield {"type": "alert", **dataclasses.asdict(result.alert)}
@@ -139,6 +142,9 @@ async def stream_pipeline_over_audio(
         "chunk_risk_score": result.chunk_risk_score,
         "justification": result.justification,
         "fraud_type": result.fraud_type.model_dump(),
+        "fake_score": result.fake_score,
+        "ai_voice_flag": result.ai_voice_flag,
+        "fusion_source": result.fusion_source,
         "audio_quality": call_state.audio_quality,
         "evidence": {
             "transcript_segment": evidence.transcript_segment,
@@ -171,10 +177,14 @@ async def upload_call(file: UploadFile = File(...)):
     y, quality = _decode_audio(raw, file.filename or "upload")
 
     settings = load_settings()
+    # A missing/misconfigured Claude provider is no longer fatal (two-line fusion architecture,
+    # see reasoning/fusion.py) — proceed with provider=None, run_final_analysis's fallback
+    # template still produces a verdict from Line 1/2's fusion result alone.
     try:
         provider = get_llm_provider()
     except LLMProviderError as e:
-        raise HTTPException(status_code=502, detail=str(e)) from e
+        logger.warning("could not get an LLM provider for upload analysis, proceeding without it: %s", e)
+        provider = None
 
     call_state = CallState()
     call_state.audio_quality = quality
@@ -185,18 +195,26 @@ async def upload_call(file: UploadFile = File(...)):
         # Once streaming starts, the HTTP status is already committed (200) — an error partway
         # through can no longer become a 502 the way the old single-JSON-response version did.
         # It's signaled in-band as a "error" event instead, same pattern as server/ws.py.
+        #
+        # Catches Exception broadly, not just LLMProviderError — confirmed directly (2026-08-06):
+        # a CUDA OOM inside process_chunk_signals (or any other bug partway through a chunk) used
+        # to propagate out of this generator uncaught. Starlette can't turn that into a clean HTTP
+        # error once headers/chunks are already on the wire, so it just drops the connection —
+        # which the browser reports as an opaque "network error"/ERR_INCOMPLETE_CHUNKED_ENCODING
+        # with no indication of what actually went wrong. Catching it here turns that into a
+        # normal in-band "error" event the frontend already knows how to show.
         alerts: list[dict] = []
         try:
             async for event in stream_pipeline_over_audio(y, provider, call_state, settings["hard_triggers"]):
                 if event["type"] == "alert":
                     alerts.append({k: v for k, v in event.items() if k != "type"})
                 yield _ndjson_line(event)
-        except LLMProviderError as e:
-            logger.warning("reasoning pipeline failed while analyzing uploaded call: %s", e)
+        except Exception as e:
+            logger.exception("pipeline failed while analyzing uploaded call")
             history.finish_call(
                 call_id, call_state, ended_reason="error", duration_seconds=duration_seconds, alerts=alerts
             )
-            yield _ndjson_line({"type": "error", "message": str(e)})
+            yield _ndjson_line({"type": "error", "message": str(e) or e.__class__.__name__})
             return
 
         history.finish_call(

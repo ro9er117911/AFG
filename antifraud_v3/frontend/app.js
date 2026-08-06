@@ -44,8 +44,17 @@ themeBtns.forEach((btn) =>
     const t = btn.dataset.theme;
     if (t === 'auto') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', t);
+    // ECharts bakes literal color values into each chart's option — a theme flip needs every
+    // live instance to re-read the new CSS var values and re-render, or they'd stay stuck on
+    // the old theme's colors until their next data update. See CHART_INSTANCES below.
+    CHART_INSTANCES.forEach((c) => c.render());
   })
 );
+// "auto" theme also needs to react to the OS-level scheme changing while the tab is open, not
+// just to the buttons above.
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (!document.documentElement.hasAttribute('data-theme')) CHART_INSTANCES.forEach((c) => c.render());
+});
 
 // ---- tabs ----
 document.querySelectorAll('.tab').forEach((tab) =>
@@ -57,127 +66,169 @@ document.querySelectorAll('.tab').forEach((tab) =>
     if (tab.dataset.screen === 'history') loadHistory();
     if (tab.dataset.screen === 'settings') loadSettings();
     if (tab.dataset.screen === 'testdata') loadTestData();
+    // A chart initialized while its screen was display:none (zero width) needs an explicit
+    // resize once the screen becomes visible again — ECharts doesn't observe this on its own.
+    CHART_INSTANCES.forEach((c) => c.resize());
   })
 );
 
-// ---- chart ----
-// Shared by both the live screen and the upload-result screen (see docs task: "reuse the
-// existing risk-trajectory chart / transcript-list rendering code rather than duplicating
-// it"). makeChartRenderer() closes over one screen's DOM elements and its own risk-history
-// array, so the two screens don't stomp on each other's state when switching tabs.
-function buildPath(pts, w, h) {
-  if (pts.length === 0) return { line: `M0,${h} L${w},${h}`, area: `M0,${h} L${w},${h} Z`, endX: w, endY: h };
-  const step = pts.length > 1 ? w / (pts.length - 1) : 0;
-  const toY = (v) => h - (v / 100) * h;
-  let line = `M0,${toY(pts[0])}`;
-  pts.forEach((v, i) => { if (i > 0) line += ` L${i * step},${toY(v)}`; });
-  return { line, area: line + ` L${w},${h} L0,${h} Z`, endX: pts.length > 1 ? w : 0, endY: toY(pts[pts.length - 1]) };
+window.addEventListener('resize', () => CHART_INSTANCES.forEach((c) => c.resize()));
+
+// ---- shared ECharts plumbing ----
+// One global list of { render, resize } so the theme toggle can recolor every live chart
+// instance (ECharts bakes in literal color values, not CSS custom properties, so a theme flip
+// has to explicitly re-read the CSS vars and call setOption again) and so switching tabs can
+// force a remeasure (a chart initialized while its screen was display:none reports zero width
+// until told to resize).
+const CHART_INSTANCES = [];
+function registerChart(entry) {
+  CHART_INSTANCES.push(entry);
+  return entry;
 }
 
-function makeChartRenderer(ids) {
-  const els = {
-    area: document.getElementById(ids.area),
-    line: document.getElementById(ids.line),
-    endpoint: document.getElementById(ids.endpoint),
-    riskNum: document.getElementById(ids.riskNum),
-    riskPill: document.getElementById(ids.riskPill),
-  };
-  let riskHistory = []; // {score, level}
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function riskColor(level) {
+  return { low: cssVar('--risk-low'), medium: cssVar('--risk-medium'), high: cssVar('--risk-high') }[level] || cssVar('--risk-low');
+}
+
+// Reuses an already-initialized instance on the same container instead of calling echarts.init()
+// twice — test-clip cards rebuild their chart-renderer closures on every "執行分析" click
+// (createTestClipView), but the underlying <div> is the same DOM node across re-runs.
+function ensureEChart(containerEl) {
+  return echarts.getInstanceByDom(containerEl) || echarts.init(containerEl);
+}
+
+// ---- risk gauge ----
+// Replaces the old single-point "trend line": the pipeline only ever produces one risk score
+// per call now (reasoning/fusion.py's build_synthesize_result runs once, at call end), so a
+// line/area chart never had more than one point to draw — it was always just a flat shape. A
+// gauge represents what the data actually is: one 0-100 reading with a color band.
+function makeRiskGauge(containerEl, pillEl) {
+  let score = 0;
+  let level = 'low';
 
   function render() {
-    const scores = riskHistory.map((r) => r.score);
-    const isAlertColor = riskHistory.length > 0 && riskHistory[riskHistory.length - 1].level === 'high';
-    const { line, area, endX, endY } = buildPath(scores, 400, 92);
-
-    els.area.setAttribute('d', area);
-    els.line.setAttribute('d', line);
-    els.endpoint.setAttribute('cx', endX);
-    els.endpoint.setAttribute('cy', endY);
-    [els.area, els.line, els.endpoint].forEach((el) => el.classList.toggle('alert', isAlertColor));
-
-    const latest = riskHistory[riskHistory.length - 1];
-    els.riskNum.textContent = latest ? latest.score : 0;
-    const level = latest ? latest.level : 'low';
-    els.riskPill.className = 'risk-pill ' + level;
-    els.riskPill.textContent = { low: '低風險', medium: '中風險', high: '高風險' }[level];
+    const chart = ensureEChart(containerEl);
+    chart.setOption(
+      {
+        series: [
+          {
+            type: 'gauge',
+            startAngle: 210,
+            endAngle: -30,
+            min: 0,
+            max: 100,
+            radius: '100%',
+            axisLine: { lineStyle: { width: 12, color: [[1, cssVar('--surface-2')]] } },
+            progress: { show: true, width: 12, itemStyle: { color: riskColor(level) } },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            axisLabel: { show: false },
+            pointer: { show: false },
+            anchor: { show: false },
+            detail: {
+              valueAnimation: true,
+              fontSize: 28,
+              fontWeight: 700,
+              color: cssVar('--ink'),
+              offsetCenter: [0, '-8%'],
+              formatter: '{value}',
+            },
+            data: [{ value: score }],
+          },
+        ],
+      },
+      true
+    );
+    if (pillEl) {
+      pillEl.className = 'risk-pill ' + level;
+      pillEl.textContent = { low: '低風險', medium: '中風險', high: '高風險' }[level];
+    }
   }
 
+  registerChart({ render, resize: () => echarts.getInstanceByDom(containerEl)?.resize() });
+
   return {
-    push(score, level) {
-      riskHistory.push({ score, level });
-      if (riskHistory.length > MAX_CHART_POINTS) riskHistory.shift();
+    push(newScore, newLevel) {
+      score = newScore;
+      level = newLevel;
       render();
     },
     reset() {
-      riskHistory = [];
+      score = 0;
+      level = 'low';
       render();
     },
     render,
   };
 }
 
-const liveChart = makeChartRenderer({
-  area: 'chartArea', line: 'chartLine', endpoint: 'chartEndpoint', riskNum: 'riskNum', riskPill: 'riskPill',
-});
-const uploadChart = makeChartRenderer({
-  area: 'uploadChartArea', line: 'uploadChartLine', endpoint: 'uploadChartEndpoint',
-  riskNum: 'uploadRiskNum', riskPill: 'uploadRiskPill',
-});
+const liveChart = makeRiskGauge(document.getElementById('riskGauge'), document.getElementById('riskPill'));
+const uploadChart = makeRiskGauge(document.getElementById('uploadRiskGauge'), document.getElementById('uploadRiskPill'));
 
-// ---- acoustic metric charts (pitch + 3a's jitter/shimmer/HNR/pause/speech-rate) ----
-// Separate from the risk chart above: these stream live during the call itself (ASR/acoustic/
-// emotion, no LLM — pipeline/chunk_worker.py's process_chunk_signals), one point per chunk.
-// The risk chart only ever gets one point, once the end-of-call LLM analysis finishes.
-//
-// buildMetricPath/makeMetricChartRenderer generalize what used to be pitch-only rendering code
-// (buildPitchPath/makePitchChartRenderer) so the same machinery draws all six acoustic
-// sparklines, each with its own sensible domain — see METRIC_DEFS below.
-const PITCH_CHART_H = 56;
-const METRIC_CHART_H = 34;
-
+// ---- acoustic metric line charts (pitch + 3a's jitter/shimmer/HNR/pause/speech-rate) ----
+// Separate from the risk gauge above: these stream live during the call itself (ASR/acoustic/
+// emotion, no LLM — pipeline/chunk_worker.py's process_chunk_signals), one point per chunk —
+// an actual time series, unlike the risk gauge's single end-of-call reading.
+// colorVar: a CSS custom-property name (see index.html's :root) — one hue per metric instead of
+// repeating --accent for every tile, so the 3a grid reads as distinct series, not one color
+// block six times over. mean_pitch keeps --accent since it's the flagship chart in its own panel.
 const METRIC_DEFS = {
-  mean_pitch: { label: '音高', unit: 'Hz', min: 60, max: 320, digits: 0, h: PITCH_CHART_H },
-  jitter_local: { label: 'Jitter', unit: '%', min: 0, max: 5, digits: 2, h: METRIC_CHART_H },
-  shimmer_local: { label: 'Shimmer', unit: '%', min: 0, max: 10, digits: 2, h: METRIC_CHART_H },
-  hnr: { label: 'HNR', unit: 'dB', min: 0, max: 30, digits: 1, h: METRIC_CHART_H },
-  pause_ratio: { label: '停頓佔比', unit: '%', min: 0, max: 90, digits: 1, h: METRIC_CHART_H },
-  speech_rate_variation: { label: '語速變化', unit: '', min: 0, max: 10, digits: 2, h: METRIC_CHART_H },
+  mean_pitch: { label: '音高', unit: 'Hz', min: 60, max: 320, digits: 0, colorVar: '--accent' },
+  jitter_local: { label: 'Jitter', unit: '%', min: 0, max: 5, digits: 2, colorVar: '--chart-jitter' },
+  shimmer_local: { label: 'Shimmer', unit: '%', min: 0, max: 10, digits: 2, colorVar: '--chart-shimmer' },
+  hnr: { label: 'HNR', unit: 'dB', min: 0, max: 30, digits: 1, colorVar: '--chart-hnr' },
+  pause_ratio: { label: '停頓佔比', unit: '%', min: 0, max: 90, digits: 1, colorVar: '--chart-pause' },
+  speech_rate_variation: { label: '語速變化', unit: '', min: 0, max: 10, digits: 2, colorVar: '--chart-speech-rate' },
 };
 // 3a's small-multiples grid — pitch keeps its own larger chart in the existing panel, these five
 // get the compact grid (see index.html's .metric-grid).
 const GRID_METRIC_KEYS = ['jitter_local', 'shimmer_local', 'hnr', 'pause_ratio', 'speech_rate_variation'];
 
-function buildMetricPath(pts, w, h, min, max) {
-  const toY = (v) => {
-    const clamped = Math.min(max, Math.max(min, v));
-    return h - ((clamped - min) / (max - min)) * h;
-  };
-  if (pts.length === 0) return { line: `M0,${h} L${w},${h}`, area: `M0,${h} L${w},${h} Z`, endX: w, endY: h, toY };
-  const step = pts.length > 1 ? w / (pts.length - 1) : 0;
-  let line = `M0,${toY(pts[0])}`;
-  pts.forEach((v, i) => { if (i > 0) line += ` L${i * step},${toY(v)}`; });
-  return { line, area: line + ` L${w},${h} L0,${h} Z`, endX: pts.length > 1 ? w : 0, endY: toY(pts[pts.length - 1]), toY };
-}
-
-// els takes actual DOM elements (not ids) so this also works scoped inside one Test Data card
-// via card.querySelector(), where there can be several cards' worth of charts on the page at
-// once and a global id lookup wouldn't disambiguate them. els.endpoint/els.baselineLine are
-// optional (the compact 3a grid charts skip the endpoint dot to stay visually quiet).
-function makeMetricChartRenderer(els, { min, max, h }) {
+function makeEChartsLineMetric(containerEl, { min, max, unit, digits, colorVar }) {
   let points = [];
   let baselineVal = null;
+
   function render() {
-    const { line, area, endX, endY, toY } = buildMetricPath(points, 400, h, min, max);
-    els.area.setAttribute('d', area);
-    els.line.setAttribute('d', line);
-    if (els.endpoint) {
-      els.endpoint.setAttribute('cx', endX);
-      els.endpoint.setAttribute('cy', endY);
-    }
-    if (els.baselineLine) {
-      els.baselineLine.setAttribute('d', baselineVal == null ? '' : `M0,${toY(baselineVal)} L400,${toY(baselineVal)}`);
-    }
+    const chart = ensureEChart(containerEl);
+    const accent = cssVar(colorVar || '--accent');
+    chart.setOption(
+      {
+        grid: { left: 2, right: 2, top: 6, bottom: 2 },
+        xAxis: { type: 'category', show: false, boundaryGap: false, data: points.map((_, i) => i) },
+        yAxis: { type: 'value', min, max, show: false },
+        tooltip: { trigger: 'axis', formatter: (params) => `${Number(params[0].value).toFixed(digits)}${unit}` },
+        series: [
+          {
+            type: 'line',
+            data: points,
+            showSymbol: false,
+            smooth: true,
+            lineStyle: { color: accent, width: 2.5 },
+            areaStyle: { color: accent, opacity: 0.2 },
+            markLine:
+              baselineVal == null
+                ? undefined
+                : {
+                    symbol: 'none',
+                    silent: true,
+                    animation: false,
+                    lineStyle: { color: cssVar('--ink-faint'), type: 'dashed', width: 1 },
+                    label: { show: false },
+                    data: [{ yAxis: baselineVal }],
+                  },
+          },
+        ],
+      },
+      true
+    );
   }
+
+  registerChart({ render, resize: () => echarts.getInstanceByDom(containerEl)?.resize() });
+
   return {
     push(v) {
       if (v == null) return; // e.g. no voiced segment in this chunk — see chunk_worker.py's _compact_acoustic
@@ -200,13 +251,8 @@ function makeMetricChartRenderer(els, { min, max, h }) {
   };
 }
 
-function pitchChartEls(prefix) {
-  return {
-    area: document.getElementById(prefix + 'PitchArea'),
-    line: document.getElementById(prefix + 'PitchLine'),
-    endpoint: document.getElementById(prefix + 'PitchEndpoint'),
-    baselineLine: document.getElementById(prefix + 'PitchBaseline'),
-  };
+function pitchChartContainer(prefix) {
+  return document.getElementById(prefix + 'PitchChart');
 }
 
 // camelCase DOM-id suffix for a snake_case metric key, e.g. "pause_ratio" -> "PauseRatio".
@@ -214,31 +260,21 @@ function metricIdSuffix(key) {
   return key.split('_').map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
 }
 
-function metricChartEls(prefix, key) {
-  const suf = metricIdSuffix(key);
-  return {
-    area: document.getElementById(prefix + suf + 'Area'),
-    line: document.getElementById(prefix + suf + 'Line'),
-    baselineLine: document.getElementById(prefix + suf + 'Baseline'),
-  };
+function metricChartContainer(prefix, key) {
+  return document.getElementById(prefix + metricIdSuffix(key) + 'Chart');
 }
 
-function metricChartElsScoped(card, key) {
-  const kebab = key.replace(/_/g, '-');
-  return {
-    area: card.querySelector(`.test-clip-${kebab}-area`),
-    line: card.querySelector(`.test-clip-${kebab}-line`),
-    baselineLine: card.querySelector(`.test-clip-${kebab}-baseline`),
-  };
+function metricChartContainerScoped(card, key) {
+  return card.querySelector(`.test-clip-${key.replace(/_/g, '-')}-chart`);
 }
 
 // Builds one renderer per GRID_METRIC_KEYS entry (+ pitch, handled separately by the caller
 // since it lives in a different-sized chart) — shared shape used by createStreamingView.
-function makeGridChartRenderers(elsForKey) {
+function makeGridChartRenderers(containerForKey) {
   const renderers = {};
   GRID_METRIC_KEYS.forEach((key) => {
     const def = METRIC_DEFS[key];
-    renderers[key] = makeMetricChartRenderer(elsForKey(key), { min: def.min, max: def.max, h: def.h });
+    renderers[key] = makeEChartsLineMetric(containerForKey(key), { min: def.min, max: def.max, unit: def.unit, digits: def.digits, colorVar: def.colorVar });
   });
   return renderers;
 }
@@ -260,21 +296,23 @@ function formatBaselineDelta(current, baseline) {
   return ` · 音高較基準 ${sign}${pct.toFixed(0)}%`;
 }
 
-// ---- 3c: 8-dim acoustic "deception profile" radar — visualization only, see index.html's
-// .radar-disclaimer text. Each axis maps 1:1 to a single already-streamed acoustic metric (no
-// combining multiple indicators into one axis — that's the shape of antifraud_v2's
-// normalization bug, see docs/DESIGN.md §1). Computed entirely client-side from data already
-// pushed to this view; never touches pipeline/reasoning code, so it cannot leak into risk
-// scoring the way the old system did.
+// ---- 3c: 8-dim acoustic "deception profile" radar (ECharts native radar chart) —
+// visualization only, see index.html's .radar-disclaimer text. Each axis maps 1:1 to a single
+// already-streamed acoustic metric (no combining multiple indicators into one axis — that's
+// the shape of antifraud_v2's normalization bug, see docs/DESIGN.md §1). Computed entirely
+// client-side from data already pushed to this view; never touches pipeline/reasoning code, so
+// it cannot leak into risk scoring the way the old system did.
+// narrative/metricLabel/unit label each axis and drive the tooltip — order is the order ECharts
+// lays the 8 indicators out around the circle.
 const RADAR_AXES = [
-  { key: 'pitch_instability', invert: false },
-  { key: 'shimmer_local', invert: false },
-  { key: 'mean_pitch', invert: false },
-  { key: 'hnr', invert: true }, // lower HNR = more of this indicator
-  { key: 'speech_rate_variation', invert: false },
-  { key: 'pause_ratio', invert: false },
-  { key: 'mean_volume', invert: false },
-  { key: 'jitter_local', invert: false },
+  { key: 'pitch_instability', invert: false, narrative: '攻擊性語氣', metricLabel: '音高不穩定度', unit: '' },
+  { key: 'shimmer_local', invert: false, narrative: '矛盾衝突', metricLabel: 'Shimmer', unit: '%' },
+  { key: 'mean_pitch', invert: false, narrative: '明確否認', metricLabel: '平均音高', unit: 'Hz' },
+  { key: 'hnr', invert: true, narrative: '尷尬掩蓋', metricLabel: 'HNR', unit: 'dB' }, // lower HNR = more of this indicator
+  { key: 'speech_rate_variation', invert: false, narrative: '警覺避談', metricLabel: '語速變化', unit: '' },
+  { key: 'pause_ratio', invert: false, narrative: '猶豫不決', metricLabel: '停頓佔比', unit: '%' },
+  { key: 'mean_volume', invert: false, narrative: '異常興奮', metricLabel: '平均音量', unit: '' },
+  { key: 'jitter_local', invert: false, narrative: '邏輯漏洞', metricLabel: 'Jitter', unit: '%' },
 ];
 
 // z = (current - this call's own opening baseline) / (std dev of this metric's values seen so
@@ -291,45 +329,228 @@ function zScoreTo100(current, baselineVal, values, invert) {
   return ((z + 3) / 6) * 100;
 }
 
-function polarPoint(cx, cy, r, angleDeg) {
-  const rad = (Math.PI / 180) * angleDeg;
-  return [cx + r * Math.sin(rad), cy - r * Math.cos(rad)];
-}
-
-function buildRadarPath(values8, cx, cy, maxR) {
-  const n = values8.length;
-  const pts = values8.map((v, i) => polarPoint(cx, cy, (Math.max(0, Math.min(100, v)) / 100) * maxR, i * (360 / n)));
-  return 'M' + pts.map((p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' L') + ' Z';
-}
+const RADAR_NEUTRAL_VALUES8 = [50, 50, 50, 50, 50, 50, 50, 50];
 
 // history: plain object { metricKey: number[] }, accumulated by createStreamingView.onChunk.
-function makeRadarChartRenderer(shapeEl) {
-  function render(history, baseline) {
-    const values8 = RADAR_AXES.map((axis) => {
-      const vals = history[axis.key] || [];
+// ECharts' own series transition animates between the previous and new values automatically
+// (animationDurationUpdate below) — no hand-rolled requestAnimationFrame tweening needed.
+function makeEChartsRadar(containerEl) {
+  let lastHistory = null;
+  let lastBaseline = null;
+
+  function computeValues() {
+    if (!lastHistory) return RADAR_NEUTRAL_VALUES8;
+    return RADAR_AXES.map((axis) => {
+      const vals = lastHistory[axis.key] || [];
       const current = vals.length > 0 ? vals[vals.length - 1] : null;
-      const baselineVal = baseline ? baseline[axis.key] : null;
+      const baselineVal = lastBaseline ? lastBaseline[axis.key] : null;
       return zScoreTo100(current, baselineVal, vals, axis.invert);
     });
-    shapeEl.setAttribute('d', buildRadarPath(values8, 110, 118, 85));
   }
+
+  function render() {
+    const chart = ensureEChart(containerEl);
+    const accent = cssVar('--accent');
+    const values = computeValues();
+    chart.setOption(
+      {
+        radar: {
+          indicator: RADAR_AXES.map((a) => ({ name: a.narrative, min: 0, max: 100 })),
+          splitNumber: 4,
+          axisName: { color: cssVar('--ink-faint'), fontSize: 10 },
+          splitLine: { lineStyle: { color: cssVar('--border') } },
+          splitArea: { show: false },
+          axisLine: { lineStyle: { color: cssVar('--border') } },
+        },
+        tooltip: {
+          trigger: 'item',
+          // Hovering the shape (or any of its vertices) shows every axis's real value at once —
+          // denser but simpler than the old per-axis hit-circle hover this replaces.
+          formatter: () =>
+            RADAR_AXES.map((axis, i) => {
+              const vals = (lastHistory && lastHistory[axis.key]) || [];
+              const current = vals.length > 0 ? vals[vals.length - 1] : null;
+              const raw = current != null ? `${current.toFixed(1)}${axis.unit}` : '尚無資料';
+              return `<strong>${axis.narrative}</strong>：${axis.metricLabel} ${raw}（剖面 ${Math.round(values[i])}/100）`;
+            }).join('<br>'),
+        },
+        series: [
+          {
+            type: 'radar',
+            animationDurationUpdate: 250,
+            data: [
+              {
+                value: values,
+                areaStyle: { color: accent, opacity: 0.26 },
+                lineStyle: { color: accent, width: 2 },
+                itemStyle: { color: accent },
+              },
+            ],
+          },
+        ],
+      },
+      true
+    );
+  }
+
+  registerChart({ render, resize: () => echarts.getInstanceByDom(containerEl)?.resize() });
+
   return {
-    render,
+    render(history, baseline) {
+      lastHistory = history;
+      lastBaseline = baseline;
+      render();
+    },
     reset() {
-      shapeEl.setAttribute('d', buildRadarPath([50, 50, 50, 50, 50, 50, 50, 50], 110, 118, 85));
+      lastHistory = null;
+      lastBaseline = null;
+      render();
+    },
+  };
+}
+
+// ---- eGeMAPS (openSMILE) full-88-dim detail panel — a horizontal bar of each dim's z-score
+// vs. this call's own baseline, same self-referential z-score idea as the radar above (50 =
+// same as baseline), scaled to all 88 eGeMAPSv02 functionals instead of a curated 8. Mirrors
+// audio/egemaps.py's EGEMAPS_HIGHLIGHT_KEYS/EGEMAPS_LABELS_ZH — those 10 get a real label and a
+// highlighted bar; the other 78 get a shortened raw functional name (no 88-entry translation
+// table) so the full set stays browsable inside the collapsed <details> it lives in
+// (index.html's .egemaps-details/.egemaps-scroll — capped height + internal scroll is what
+// keeps 88 rows from ever blowing up the page layout).
+const EGEMAPS_HIGHLIGHT_KEYS = [
+  'loudness_sma3_amean', 'spectralFlux_sma3_amean', 'alphaRatioV_sma3nz_amean',
+  'hammarbergIndexV_sma3nz_amean', 'F1frequency_sma3nz_amean', 'F2frequency_sma3nz_amean',
+  'mfcc1_sma3_amean', 'slopeV0-500_sma3nz_amean', 'VoicedSegmentsPerSec', 'equivalentSoundLevel_dBp',
+];
+const EGEMAPS_LABELS_ZH = {
+  loudness_sma3_amean: '響度', spectralFlux_sma3_amean: '頻譜變化率', alphaRatioV_sma3nz_amean: 'Alpha 比率',
+  hammarbergIndexV_sma3nz_amean: 'Hammarberg 指數', F1frequency_sma3nz_amean: '共振峰 F1',
+  F2frequency_sma3nz_amean: '共振峰 F2', mfcc1_sma3_amean: 'MFCC1', 'slopeV0-500_sma3nz_amean': '頻譜斜率（低頻）',
+  VoicedSegmentsPerSec: '有聲段/秒', equivalentSoundLevel_dBp: '等效音量',
+};
+
+// e.g. "F0semitoneFrom27.5Hz_sma3nz_stddevNorm" -> "F0semitoneFrom27.5Hz · stddevNorm" — strips
+// openSMILE's smoothing-filter suffix, keeps the rest scannable without a full translation.
+function egemapsFallbackLabel(key) {
+  return key.replace(/_sma3nz?/g, '').split('_').join(' · ');
+}
+
+function egemapsLabel(key) {
+  return EGEMAPS_LABELS_ZH[key] || egemapsFallbackLabel(key);
+}
+
+// Groups the 88 dims by what they're physically measuring, reusing the same 6-hue set the 3a
+// grid uses (index.html's --accent/--chart-*) — one color per group instead of one flat gray,
+// so the detail panel isn't a monochrome wall even before you know which rows matter. Order
+// matters (first match wins): mfccV*/F1-3 checked before the plain mfcc*/spectralFlux* fallback.
+function egemapsGroupColor(key) {
+  if (key.startsWith('F0semitone')) return cssVar('--chart-jitter'); // pitch
+  if (key.startsWith('loudness') || key === 'equivalentSoundLevel_dBp' || key === 'loudnessPeaksPerSec') {
+    return cssVar('--chart-speech-rate'); // loudness/energy
+  }
+  if (key.startsWith('F1') || key.startsWith('F2') || key.startsWith('F3')) return cssVar('--chart-pause'); // formants
+  if (key.startsWith('jitter') || key.startsWith('shimmer') || key.startsWith('HNR') || key.startsWith('logRelF0')) {
+    return cssVar('--chart-shimmer'); // voice quality
+  }
+  if (key.startsWith('spectralFlux') || key.startsWith('mfcc')) return cssVar('--chart-hnr'); // spectral/timbre
+  return cssVar('--accent'); // alphaRatio/hammarberg/slope/voicing-rhythm catch-all
+}
+
+const EGEMAPS_ROW_HEIGHT = 15;
+
+function makeEChartsEgemapsBar(containerEl) {
+  let lastHistory = null; // { featureKey: number[] }, keyed in server-arrival order (== eGeMAPS's own canonical order)
+  let lastBaseline = null; // { featureKey: number } | null
+  let keys = [];
+
+  function render() {
+    if (keys.length === 0) return; // nothing pushed yet — nothing sensible to draw
+    const chart = ensureEChart(containerEl);
+    const muted = cssVar('--ink-faint');
+    const ink = cssVar('--ink');
+    containerEl.style.height = `${keys.length * EGEMAPS_ROW_HEIGHT + 40}px`;
+    const isHighlight = (i) => EGEMAPS_HIGHLIGHT_KEYS.includes(keys[i]);
+    // Color says "what kind of feature is this" (egemapsGroupColor, one of the same 6 hues the
+    // 3a grid uses); opacity + bold label say "is this one of the 10 usually-worth-checking
+    // ones" — two independent signals instead of one color meaning both, so the panel isn't a
+    // flat gray wall for the 78 non-highlight rows.
+    const barColors = keys.map(egemapsGroupColor);
+    const values = keys.map((k) => {
+      const vals = (lastHistory && lastHistory[k]) || [];
+      const current = vals.length > 0 ? vals[vals.length - 1] : null;
+      const baselineVal = lastBaseline ? lastBaseline[k] : null;
+      return zScoreTo100(current, baselineVal, vals, false);
+    });
+    chart.setOption(
+      {
+        grid: { left: 150, right: 30, top: 10, bottom: 10 },
+        xAxis: { type: 'value', min: 0, max: 100, show: false },
+        yAxis: {
+          type: 'category',
+          data: keys.map(egemapsLabel),
+          inverse: true,
+          axisLine: { show: false },
+          axisTick: { show: false },
+          axisLabel: {
+            fontSize: 11,
+            color: (_value, index) => (isHighlight(index) ? ink : muted),
+            fontWeight: (_value, index) => (isHighlight(index) ? 700 : 400),
+          },
+        },
+        tooltip: {
+          trigger: 'item',
+          formatter: (p) => {
+            const k = keys[p.dataIndex];
+            const vals = (lastHistory && lastHistory[k]) || [];
+            const current = vals.length > 0 ? vals[vals.length - 1] : null;
+            return `<strong>${egemapsLabel(k)}</strong><br>目前值：${current != null ? current.toFixed(3) : '尚無資料'}<br>剖面分數：${Math.round(p.value)}/100`;
+          },
+        },
+        series: [
+          {
+            type: 'bar',
+            barWidth: 9,
+            data: values.map((v, i) => ({
+              value: v,
+              itemStyle: { color: barColors[i], opacity: isHighlight(i) ? 0.95 : 0.45 },
+            })),
+          },
+        ],
+      },
+      true
+    );
+    chart.resize();
+  }
+
+  registerChart({ render, resize: () => echarts.getInstanceByDom(containerEl)?.resize() });
+
+  return {
+    render(history, baseline) {
+      lastHistory = history;
+      lastBaseline = baseline;
+      if (keys.length === 0 && history) keys = Object.keys(history);
+      render();
+    },
+    reset() {
+      lastHistory = null;
+      lastBaseline = null;
+      keys = [];
+      const chart = echarts.getInstanceByDom(containerEl);
+      if (chart) chart.clear();
+      containerEl.style.height = '';
     },
   };
 }
 
 // ---- HTML generator for the 3a/3b/3c panel shared by live/upload/test-clip screens ----
 // classIdAttr(prefix, useClass, fixedClasses, name) returns a single class="..." attribute
-// (plus id="..." when not useClass) for a bare camelCase element name (e.g. "radarShape",
-// "jitterLocalArea") combined with the element's own fixed CSS class(es) — see classIdAttr below.
+// (plus id="..." when not useClass) for a bare camelCase element name (e.g. "radarChart",
+// "jitterLocalChart") combined with the element's own fixed CSS class(es).
 // Returns a single `class="..."` attribute (id-based mode also appends a separate `id="..."`)
 // — MUST stay a single class attribute per element: two class="..." attributes on one tag is
 // invalid HTML, and browsers silently keep only the first, dropping the second (confirmed by a
 // real headless-browser run: this exact bug made every scoped .test-clip-* selector return
-// null, which then threw inside makeMetricChartRenderer's els.area.setAttribute(...)).
+// null, which then threw inside the chart renderer's ECharts init on a null container).
 function classIdAttr(prefix, useClass, fixedClasses, name) {
   if (useClass) {
     const kebab = name.replace(/([A-Z])/g, '-$1').toLowerCase();
@@ -348,13 +569,7 @@ function acousticExtraHTML(prefix, useClass) {
     return `
     <div class="metric-cell">
       <div class="metric-cell-label">${def.label}</div>
-      <div class="metric-chart-wrap">
-        <svg viewBox="0 0 400 ${METRIC_CHART_H}" preserveAspectRatio="none">
-          <path ${a('metric-area', base + 'Area')} d="M0,${METRIC_CHART_H} L400,${METRIC_CHART_H} Z"/>
-          <path ${a('metric-line', base + 'Line')} d="M0,${METRIC_CHART_H} L400,${METRIC_CHART_H}"/>
-          <path ${a('baseline-ref', base + 'Baseline')} d=""/>
-        </svg>
-      </div>
+      <div ${a('metric-chart-wrap', base + 'Chart')}></div>
     </div>`;
   }).join('');
 
@@ -362,35 +577,26 @@ function acousticExtraHTML(prefix, useClass) {
     <div class="metric-grid">${metricCells}</div>
     <div ${a('baseline-readout mono', 'baselineReadout')}>尚未建立基準值（通話開頭 15 秒後自動建立）。</div>
     <div class="radar-wrap">
-      <svg viewBox="-20 -2 260 240">
-        <circle class="radar-grid-ring" cx="110" cy="118" r="21.25"/>
-        <circle class="radar-grid-ring" cx="110" cy="118" r="42.5"/>
-        <circle class="radar-grid-ring" cx="110" cy="118" r="63.75"/>
-        <circle class="radar-grid-ring" cx="110" cy="118" r="85"/>
-        <line class="radar-axis-line" x1="110" y1="118" x2="110" y2="33"/>
-        <line class="radar-axis-line" x1="110" y1="118" x2="170.1" y2="57.9"/>
-        <line class="radar-axis-line" x1="110" y1="118" x2="195" y2="118"/>
-        <line class="radar-axis-line" x1="110" y1="118" x2="170.1" y2="178.1"/>
-        <line class="radar-axis-line" x1="110" y1="118" x2="110" y2="203"/>
-        <line class="radar-axis-line" x1="110" y1="118" x2="49.9" y2="178.1"/>
-        <line class="radar-axis-line" x1="110" y1="118" x2="25" y2="118"/>
-        <line class="radar-axis-line" x1="110" y1="118" x2="49.9" y2="57.9"/>
-        <text class="radar-axis-label" x="110" y="18">攻擊性語氣</text>
-        <text class="radar-axis-label" x="180.7" y="47.3">矛盾衝突</text>
-        <text class="radar-axis-label" x="212" y="121">明確否認</text>
-        <text class="radar-axis-label" x="180.7" y="192">尷尬掩蓋</text>
-        <text class="radar-axis-label" x="110" y="230">警覺避談</text>
-        <text class="radar-axis-label" x="39.3" y="192">猶豫不決</text>
-        <text class="radar-axis-label" x="8" y="121">異常興奮</text>
-        <text class="radar-axis-label" x="39.3" y="47.3">邏輯漏洞</text>
-        <path ${a('radar-shape', 'radarShape')} d="M110,118 L110,118 L110,118 L110,118 L110,118 L110,118 L110,118 L110,118 Z"/>
-      </svg>
+      <div ${a('radar-chart', 'radarChart')}></div>
       <div class="radar-disclaimer">聲學特徵剖面（僅供參考，非風險判定）— 與本通話自己的開頭基準值比較</div>
-    </div>`;
+    </div>
+    <details class="egemaps-details">
+      <summary class="egemaps-summary">進階聲學特徵（eGeMAPS，共 88 維）</summary>
+      <div class="egemaps-note">openSMILE eGeMAPSv02 標準特徵集，數值為與本通話開頭基準值的差異程度（50 = 與基準相同）；深色列是較常參考的 10 項，其餘為完整 88 維供查閱。</div>
+      <div class="egemaps-scroll"><div ${a('egemaps-chart', 'egemapsChart')}></div></div>
+    </details>`;
 }
 
 // ---- emotion badge + acoustic readout ----
-const EMOTION_LABELS_ZH = { anger: '生氣', boredom: '無聊', disgust: '厭惡', fear: '恐懼', happy: '開心', neutral: '中性', sad: '難過' };
+// Covers both backends' label vocabularies (audio/emotion.py dispatches between them per the
+// "emotion_backend" setting) — TIMNet's anger/boredom/disgust/fear/happy/neutral/sad and
+// WavLM's anger/contempt/disgust/fear/happy/neutral/sad/surprise/other (already lowercased/
+// normalized server-side, see detectors/emotion_wavlm.py's _LABEL_MAP) share every overlapping
+// key, so only "boredom" (TIMNet-only) and "contempt"/"surprise"/"other" (WavLM-only) differ.
+const EMOTION_LABELS_ZH = {
+  anger: '生氣', boredom: '無聊', disgust: '厭惡', fear: '恐懼', happy: '開心', neutral: '中性', sad: '難過',
+  contempt: '輕蔑', surprise: '驚訝', other: '其他',
+};
 const FRAUD_TYPE_LABELS_ZH = {
   investment_fraud: '投資詐騙', phishing_fraud: '網路釣魚詐騙', identity_theft: '身分冒用',
   lottery_fraud: '中獎摸彩詐騙', banking_fraud: '銀行詐騙', extortion_fraud: '勒索詐騙',
@@ -399,9 +605,9 @@ const FRAUD_TYPE_LABELS_ZH = {
 
 function emotionBadgeClass(label) {
   if (label === 'happy') return 'emo-low';
-  if (label === 'fear' || label === 'sad') return 'emo-medium';
-  if (label === 'anger' || label === 'disgust') return 'emo-high';
-  return 'emo-neutral'; // neutral, boredom
+  if (label === 'fear' || label === 'sad' || label === 'surprise') return 'emo-medium';
+  if (label === 'anger' || label === 'disgust' || label === 'contempt') return 'emo-high';
+  return 'emo-neutral'; // neutral, boredom, other
 }
 
 function formatAcousticReadout(a) {
@@ -409,8 +615,28 @@ function formatAcousticReadout(a) {
   return `音高 ${pitch} · jitter ${a.jitter_local}% · shimmer ${a.shimmer_local}% · HNR ${a.hnr}dB · 停頓 ${a.pause_ratio}%`;
 }
 
+// msg.fake_score/ai_voice_flag/fusion_source come straight off SynthesizeResult (server/ws.py,
+// server/upload.py's final_analysis event) — reasoning/fusion.py's fuse() already computed
+// which of Line 1 (acoustic: AI cloned voice) or Line 2 (semantic: scam-script content) drove
+// the verdict, but until now the frontend only ever read msg.fraud_type here, silently dropping
+// the other three fields it was already being sent. Showing them as two separate badges is what
+// distinguishes "sounds like a cloned voice" from "content reads like a scam script" instead of
+// one undifferentiated risk chip.
 function badgeRowHTML(msg) {
   const chips = [];
+  // Always shown as a plain score, not gated on ai_voice_flag/threshold — a continuous "how
+  // AI-like did this sound" readout, not a pop-up warning. Uses .info-badge.line1's teal accent
+  // styling only past the actual fusion threshold (msg.ai_voice_flag true, i.e. the same
+  // fake_score >= DEEPFAKE_FAKE_SCORE_THRESHOLD that made Line 1 win fusion) — the real "this is
+  // dangerous" signal still lives in the alert banner and 最終研判 text, not this chip's color.
+  if (msg.fake_score != null) {
+    chips.push(
+      `<span class="info-badge${msg.ai_voice_flag ? ' line1' : ''}">聲學：AI 合成／複製語音機率 ${Math.round(msg.fake_score * 100)}%</span>`
+    );
+  }
+  if (msg.fusion_source === 'line2_semantic' && msg.fraud_type && msg.fraud_type.fraud_type !== 'unclassified') {
+    chips.push(`<span class="info-badge line2">文字語意：疑似詐騙話術</span>`);
+  }
   if (msg.fraud_type && msg.fraud_type.fraud_type && msg.fraud_type.fraud_type !== 'unclassified') {
     const label = FRAUD_TYPE_LABELS_ZH[msg.fraud_type.fraud_type] || msg.fraud_type.fraud_type;
     chips.push(`<span class="info-badge">疑似：${label}（${msg.fraud_type.confidence}）</span>`);
@@ -440,26 +666,35 @@ function evidenceHTML(evidence) {
 // server/upload.py's stream_pipeline_over_audio), just wired to different DOM elements. els:
 // { transcriptList, pitchChart, gridCharts, acousticReadout, emotionBadge, baselineReadout?,
 //   radar?, badgeRow?, alertsList?, finalSummary?, evidence? } — the optional ones don't exist
-// on the live screen (which uses the top alert banner and the settled riskPill/riskNum readout
-// instead).
+// on the live screen (which uses the top alert banner and the settled risk gauge/pill instead).
 function createStreamingView(els) {
   let alerts = [];
   let baseline = null;
+  let egemapsBaseline = null;
   const metricHistory = { mean_pitch: [], pitch_instability: [], mean_volume: [] }; // radar-only trackers
+  const egemapsHistory = {}; // { featureKey: number[] } — lazily keyed from the first msg.egemaps
+
   return {
     reset() {
       alerts = [];
       baseline = null;
+      egemapsBaseline = null;
       Object.keys(metricHistory).forEach((k) => { metricHistory[k] = []; });
+      Object.keys(egemapsHistory).forEach((k) => delete egemapsHistory[k]);
       els.transcriptList.innerHTML = '';
       els.pitchChart.reset();
       if (els.gridCharts) Object.values(els.gridCharts).forEach((c) => c.reset());
       if (els.baselineReadout) els.baselineReadout.textContent = formatBaselineReadout(null);
       if (els.radar) els.radar.reset();
+      if (els.egemapsChart) els.egemapsChart.reset();
       if (els.badgeRow) els.badgeRow.innerHTML = '';
       els.acousticReadout.textContent = '尚未偵測到聲音。';
       els.emotionBadge.textContent = '尚無資料';
       els.emotionBadge.className = 'emo-badge emo-neutral';
+      if (els.deepfakeBadge) {
+        els.deepfakeBadge.textContent = 'AI 合成 --%';
+        els.deepfakeBadge.className = 'deepfake-badge';
+      }
       if (els.alertsList) els.alertsList.innerHTML = '';
       if (els.finalSummary) els.finalSummary.textContent = '';
       if (els.evidence) els.evidence.innerHTML = '';
@@ -487,15 +722,27 @@ function createStreamingView(els) {
           els.radar.render(fullHistory, baseline);
         }
       }
+      if (msg.egemaps && els.egemapsChart) {
+        Object.entries(msg.egemaps).forEach(([k, v]) => {
+          if (!egemapsHistory[k]) egemapsHistory[k] = [];
+          egemapsHistory[k].push(v);
+        });
+        els.egemapsChart.render(egemapsHistory, egemapsBaseline);
+      }
       if (msg.baseline) {
         baseline = msg.baseline;
         els.pitchChart.setBaseline(baseline.mean_pitch);
         if (els.gridCharts) GRID_METRIC_KEYS.forEach((key) => els.gridCharts[key].setBaseline(baseline[key]));
         if (els.baselineReadout) els.baselineReadout.textContent = formatBaselineReadout(baseline);
       }
+      if (msg.egemaps_baseline) egemapsBaseline = msg.egemaps_baseline;
       if (msg.emotion) {
         els.emotionBadge.textContent = `${EMOTION_LABELS_ZH[msg.emotion.label] || msg.emotion.label} ${msg.emotion.top_prob}`;
         els.emotionBadge.className = 'emo-badge ' + emotionBadgeClass(msg.emotion.label);
+      }
+      if (msg.deepfake && els.deepfakeBadge) {
+        els.deepfakeBadge.textContent = `AI 合成 ${Math.round(msg.deepfake.fake_score * 100)}%`;
+        els.deepfakeBadge.className = 'deepfake-badge' + (msg.deepfake.fake_score >= 0.85 ? ' deepfake-notable' : '');
       }
     },
     onAlert(msg) {
@@ -589,6 +836,18 @@ function setInterimTranscript(text) {
   interimRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+// pipeline/call_state.py's apply_final_result() already distinguishes three alert reasons
+// (deepfake_voice / hard_trigger / final_analysis) — this used to collapse the latter two into
+// the same generic "風險持續偏高" title, which misleadingly implied every alert was a vague
+// "risk trending up" read when it could just as easily be Line 1 (AI cloned voice, an acoustic
+// signal) or Line 2 (scam-script content, a semantic signal). Surfacing the real reason here.
+function alertTitle(a) {
+  if (a.reason === 'hard_trigger') return `高信度示警 · ${a.trigger_name || ''}`;
+  if (a.reason === 'deepfake_voice') return '示警 · 偵測到 AI 合成／複製語音（聲學訊號）';
+  if (a.reason === 'final_analysis') return '示警 · 話術內容疑似詐騙（文字語意訊號）';
+  return '示警 · 風險持續偏高';
+}
+
 // Shared by every screen that shows fired alerts (live banner aside — see showAlert): the
 // upload-result screen, the history detail view, and the Test Data screen.
 function alertsListHTML(alerts) {
@@ -602,7 +861,7 @@ function alertsListHTML(alerts) {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3L2 20h20L12 3z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17h.01" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
       </div>
       <div class="alert-body">
-        <div class="alert-title">${a.reason === 'hard_trigger' ? '高信度示警 · ' + (a.trigger_name || '') : '示警 · 風險持續偏高'}</div>
+        <div class="alert-title">${alertTitle(a)}</div>
         <div class="alert-reason">${a.justification || ''}</div>
       </div>
     </div>`
@@ -641,8 +900,7 @@ function renderCallDetail(data, ctx) {
 // ---- alert ----
 function showAlert(alertMsg) {
   const banner = document.getElementById('alertBanner');
-  document.querySelector('#alertBanner .alert-title').textContent =
-    alertMsg.reason === 'hard_trigger' ? `高信度示警 · ${alertMsg.trigger_name || ''}` : '示警 · 風險持續偏高';
+  document.querySelector('#alertBanner .alert-title').textContent = alertTitle(alertMsg);
   document.querySelector('#alertBanner .alert-reason').textContent = alertMsg.justification || '';
   banner.classList.add('show');
 
@@ -678,12 +936,14 @@ document.getElementById('uploadAcousticExtra').innerHTML = acousticExtraHTML('up
 
 const liveView = createStreamingView({
   transcriptList: document.getElementById('transcriptList'),
-  pitchChart: makeMetricChartRenderer(pitchChartEls('live'), { min: METRIC_DEFS.mean_pitch.min, max: METRIC_DEFS.mean_pitch.max, h: PITCH_CHART_H }),
-  gridCharts: makeGridChartRenderers((key) => metricChartEls('live', key)),
+  pitchChart: makeEChartsLineMetric(pitchChartContainer('live'), { min: METRIC_DEFS.mean_pitch.min, max: METRIC_DEFS.mean_pitch.max, unit: METRIC_DEFS.mean_pitch.unit, digits: METRIC_DEFS.mean_pitch.digits }),
+  gridCharts: makeGridChartRenderers((key) => metricChartContainer('live', key)),
   acousticReadout: document.getElementById('liveAcousticReadout'),
   emotionBadge: document.getElementById('liveEmotionBadge'),
+  deepfakeBadge: document.getElementById('liveDeepfakeBadge'),
   baselineReadout: document.getElementById('liveBaselineReadout'),
-  radar: makeRadarChartRenderer(document.getElementById('liveRadarShape')),
+  radar: makeEChartsRadar(document.getElementById('liveRadarChart')),
+  egemapsChart: makeEChartsEgemapsBar(document.getElementById('liveEgemapsChart')),
   badgeRow: document.getElementById('liveBadgeRow'),
   finalSummary: document.getElementById('finalJustification'),
   evidence: document.getElementById('liveEvidence'),
@@ -839,13 +1099,16 @@ async function loadHistory() {
   document.getElementById('historyListView').style.display = 'block';
 
   const container = document.getElementById('historyList');
+  const deleteAllBtn = document.getElementById('btnHistoryDeleteAll');
   let calls;
   try {
     calls = await (await fetch('/api/calls')).json();
   } catch (err) {
     container.innerHTML = `<div class="placeholder-note">無法載入歷史紀錄：${err.message}</div>`;
+    deleteAllBtn.style.display = 'none';
     return;
   }
+  deleteAllBtn.style.display = calls.length ? 'inline-block' : 'none';
   if (!calls.length) {
     container.innerHTML = '<div class="placeholder-note" id="historyPlaceholder">還沒有通話紀錄——結束一次「開始監聽」就會出現在這裡。</div>';
     return;
@@ -860,24 +1123,54 @@ async function loadHistory() {
       </div>
       <div class="history-dur mono">${formatDuration(c.duration_seconds)}</div>
       <span class="risk-pill ${c.final_risk_level || 'low'}">${RISK_LABELS[c.final_risk_level] || '低風險'}</span>
+      <button class="history-delete" data-call-id="${c.id}" title="刪除這筆紀錄" aria-label="刪除">&times;</button>
     </div>`
     )
     .join('');
 }
 
+async function deleteCall(callId) {
+  try {
+    const res = await fetch(`/api/calls/${callId}`, { method: 'DELETE' });
+    if (!res.ok && res.status !== 404) throw new Error(`伺服器回應 ${res.status}`);
+  } catch (err) {
+    alert('刪除失敗：' + err.message);
+    return;
+  }
+  loadHistory();
+}
+
+document.getElementById('btnHistoryDeleteAll').addEventListener('click', async () => {
+  if (!confirm('確定要刪除全部通話紀錄嗎？此操作無法復原。')) return;
+  try {
+    const res = await fetch('/api/calls', { method: 'DELETE' });
+    if (!res.ok) throw new Error(`伺服器回應 ${res.status}`);
+  } catch (err) {
+    alert('刪除失敗：' + err.message);
+    return;
+  }
+  loadHistory();
+});
+
 // Delegated once on the container (not inside loadHistory, which replaces its innerHTML on
 // every tab visit / refresh — attaching there would stack up a duplicate listener per visit).
 document.getElementById('historyList').addEventListener('click', (e) => {
+  const delBtn = e.target.closest('.history-delete');
+  if (delBtn) {
+    e.stopPropagation();
+    if (confirm('確定要刪除這筆通話紀錄嗎？此操作無法復原。')) deleteCall(delBtn.dataset.callId);
+    return;
+  }
   const row = e.target.closest('.history-row');
   if (row) openHistoryDetail(row.dataset.callId);
 });
 
-const historyChart = makeChartRenderer({
-  area: 'historyChartArea', line: 'historyChartLine', endpoint: 'historyChartEndpoint',
-  riskNum: 'historyRiskNum', riskPill: 'historyRiskPill',
-});
+const historyChart = makeRiskGauge(document.getElementById('historyRiskGauge'), document.getElementById('historyRiskPill'));
+
+let currentHistoryCallId = null;
 
 async function openHistoryDetail(callId) {
+  currentHistoryCallId = callId;
   document.getElementById('historyListView').style.display = 'none';
   document.getElementById('historyDetailView').style.display = 'block';
   document.getElementById('historyDetailSummary').textContent = '載入中…';
@@ -912,10 +1205,22 @@ document.getElementById('btnHistoryBack').addEventListener('click', () => {
   document.getElementById('historyListView').style.display = 'block';
 });
 
+document.getElementById('btnHistoryDelete').addEventListener('click', async () => {
+  if (!currentHistoryCallId) return;
+  if (!confirm('確定要刪除這筆通話紀錄嗎？此操作無法復原。')) return;
+  await deleteCall(currentHistoryCallId);
+  document.getElementById('historyDetailView').style.display = 'none';
+  document.getElementById('historyListView').style.display = 'block';
+});
+
 // ---- settings (server/api.py: GET/POST /api/settings) ----
 const providerSelect = document.getElementById('providerSelect');
 const modelSelect = document.getElementById('modelSelect');
+const line2Select = document.getElementById('line2Select');
+const asrSelect = document.getElementById('asrSelect');
+const emotionBackendSelect = document.getElementById('emotionBackendSelect');
 const effortRow = document.getElementById('effortRow');
+const llmSummaryRow = document.getElementById('llmSummaryRow');
 const hardTriggerList = document.getElementById('hardTriggerList');
 
 let currentHardTriggers = [];
@@ -965,8 +1270,14 @@ async function loadSettings() {
 
   providerSelect.value = settings.llm_provider;
   modelSelect.value = settings.llm_model;
+  line2Select.value = settings.line2_backend;
+  asrSelect.value = settings.asr_backend;
+  emotionBackendSelect.value = settings.emotion_backend;
   effortRow.querySelectorAll('.effort-opt').forEach((opt) =>
     opt.classList.toggle('active', opt.dataset.value === settings.llm_effort)
+  );
+  llmSummaryRow.querySelectorAll('.effort-opt').forEach((opt) =>
+    opt.classList.toggle('active', opt.dataset.value === (settings.llm_final_summary_enabled ? 'on' : 'off'))
   );
   currentHardTriggers = [...settings.hard_triggers];
   renderHardTriggers();
@@ -977,6 +1288,9 @@ async function loadSettings() {
 
 providerSelect.addEventListener('change', () => saveSettings({ llm_provider: providerSelect.value }));
 modelSelect.addEventListener('change', () => saveSettings({ llm_model: modelSelect.value }));
+line2Select.addEventListener('change', () => saveSettings({ line2_backend: line2Select.value }));
+asrSelect.addEventListener('change', () => saveSettings({ asr_backend: asrSelect.value }));
+emotionBackendSelect.addEventListener('change', () => saveSettings({ emotion_backend: emotionBackendSelect.value }));
 effortRow.querySelectorAll('.effort-opt').forEach((opt) =>
   opt.addEventListener('click', () => {
     effortRow.querySelectorAll('.effort-opt').forEach((o) => o.classList.remove('active'));
@@ -984,182 +1298,25 @@ effortRow.querySelectorAll('.effort-opt').forEach((opt) =>
     saveSettings({ llm_effort: opt.dataset.value });
   })
 );
-
-// ---- 3d: waveform + spectrogram (upload-analysis and test-data screens only; static,
-// one-shot render after the whole file is decoded — not real-time/streaming, per the plan's
-// priority call). Self-contained (no new library): a small iterative radix-2 Cooley-Tukey FFT
-// for the spectrogram, matching this project's existing "no new framework" convention.
-async function decodeAudioFile(arrayBuffer) {
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  const ctx = new Ctx();
-  try {
-    const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
-    return { samples: audioBuffer.getChannelData(0), sampleRate: audioBuffer.sampleRate };
-  } finally {
-    ctx.close();
-  }
-}
-
-function drawWaveform(canvas, samples) {
-  const w = (canvas.width = Math.max(1, Math.floor(canvas.clientWidth || 400)));
-  const h = (canvas.height = 80);
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, w, h);
-  if (samples.length === 0) return;
-  const mid = h / 2;
-  const samplesPerPixel = Math.max(1, Math.floor(samples.length / w));
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2F8F86';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let x = 0; x < w; x++) {
-    const start = x * samplesPerPixel;
-    if (start >= samples.length) break;
-    const end = Math.min(samples.length, start + samplesPerPixel);
-    let min = 1;
-    let max = -1;
-    for (let i = start; i < end; i++) {
-      const v = samples[i];
-      if (v < min) min = v;
-      if (v > max) max = v;
-    }
-    ctx.moveTo(x + 0.5, mid + min * mid);
-    ctx.lineTo(x + 0.5, mid + max * mid);
-  }
-  ctx.stroke();
-}
-
-// In-place iterative radix-2 Cooley-Tukey — `real`/`imag` length must be a power of 2.
-function fftInPlace(real, imag) {
-  const n = real.length;
-  for (let i = 1, j = 0; i < n; i++) {
-    let bit = n >> 1;
-    for (; j & bit; bit >>= 1) j ^= bit;
-    j ^= bit;
-    if (i < j) {
-      [real[i], real[j]] = [real[j], real[i]];
-      [imag[i], imag[j]] = [imag[j], imag[i]];
-    }
-  }
-  for (let len = 2; len <= n; len <<= 1) {
-    const ang = (-2 * Math.PI) / len;
-    const wr0 = Math.cos(ang);
-    const wi0 = Math.sin(ang);
-    for (let i = 0; i < n; i += len) {
-      let curWr = 1;
-      let curWi = 0;
-      for (let k = 0; k < len / 2; k++) {
-        const ur = real[i + k];
-        const ui = imag[i + k];
-        const vr = real[i + k + len / 2] * curWr - imag[i + k + len / 2] * curWi;
-        const vi = real[i + k + len / 2] * curWi + imag[i + k + len / 2] * curWr;
-        real[i + k] = ur + vr;
-        imag[i + k] = ui + vi;
-        real[i + k + len / 2] = ur - vr;
-        imag[i + k + len / 2] = ui - vi;
-        const nwr = curWr * wr0 - curWi * wi0;
-        const nwi = curWr * wi0 + curWi * wr0;
-        curWr = nwr;
-        curWi = nwi;
-      }
-    }
-  }
-}
-
-const SPECTROGRAM_FFT_SIZE = 1024;
-const SPECTROGRAM_HOP = 256;
-
-function computeSpectrogram(samples) {
-  const n = SPECTROGRAM_FFT_SIZE;
-  const window = new Float32Array(n);
-  for (let i = 0; i < n; i++) window[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (n - 1)); // Hann
-  const frames = [];
-  for (let start = 0; start + n <= samples.length; start += SPECTROGRAM_HOP) {
-    const real = new Float32Array(n);
-    const imag = new Float32Array(n);
-    for (let i = 0; i < n; i++) real[i] = samples[start + i] * window[i];
-    fftInPlace(real, imag);
-    const half = n / 2;
-    const mags = new Float32Array(half);
-    for (let i = 0; i < half; i++) mags[i] = 20 * Math.log10(Math.sqrt(real[i] * real[i] + imag[i] * imag[i]) + 1e-6);
-    frames.push(mags);
-  }
-  return frames;
-}
-
-// Three-stop gradient (dark -> teal accent -> warm high-magnitude) — a fixed palette rather
-// than reading CSS custom properties per-pixel, since canvas pixel colors don't need to react
-// to a live theme toggle for a static, one-shot render.
-function magnitudeToColorRGB(t) {
-  const clamped = Math.max(0, Math.min(1, t));
-  const stops = [
-    [10, 20, 19],
-    [47, 143, 134],
-    [226, 86, 76],
-  ];
-  const seg = clamped < 0.5 ? 0 : 1;
-  const localT = clamped < 0.5 ? clamped / 0.5 : (clamped - 0.5) / 0.5;
-  const a = stops[seg];
-  const b = stops[seg + 1];
-  return [
-    Math.round(a[0] + (b[0] - a[0]) * localT),
-    Math.round(a[1] + (b[1] - a[1]) * localT),
-    Math.round(a[2] + (b[2] - a[2]) * localT),
-  ];
-}
-
-function drawSpectrogram(canvas, frames) {
-  const w = (canvas.width = Math.max(1, Math.floor(canvas.clientWidth || 400)));
-  const h = (canvas.height = 110);
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, w, h);
-  if (frames.length === 0) return;
-  const numBins = frames[0].length;
-  let minDb = Infinity;
-  let maxDb = -Infinity;
-  for (const f of frames) {
-    for (const v of f) {
-      if (v < minDb) minDb = v;
-      if (v > maxDb) maxDb = v;
-    }
-  }
-  const range = Math.max(maxDb - minDb, 1e-6);
-  const img = ctx.createImageData(w, h);
-  for (let x = 0; x < w; x++) {
-    const frameIdx = Math.min(frames.length - 1, Math.floor((x / w) * frames.length));
-    const frame = frames[frameIdx];
-    for (let y = 0; y < h; y++) {
-      const binIdx = Math.min(numBins - 1, Math.floor(((h - 1 - y) / h) * numBins));
-      const t = (frame[binIdx] - minDb) / range;
-      const [r, g, b] = magnitudeToColorRGB(t);
-      const idx = (y * w + x) * 4;
-      img.data[idx] = r;
-      img.data[idx + 1] = g;
-      img.data[idx + 2] = b;
-      img.data[idx + 3] = 255;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-}
-
-async function renderWaveformAndSpectrogram(arrayBuffer, waveformCanvas, spectrogramCanvas) {
-  try {
-    const { samples } = await decodeAudioFile(arrayBuffer);
-    drawWaveform(waveformCanvas, samples);
-    drawSpectrogram(spectrogramCanvas, computeSpectrogram(samples));
-  } catch (err) {
-    console.error('Failed to render waveform/spectrogram', err);
-  }
-}
+llmSummaryRow.querySelectorAll('.effort-opt').forEach((opt) =>
+  opt.addEventListener('click', () => {
+    llmSummaryRow.querySelectorAll('.effort-opt').forEach((o) => o.classList.remove('active'));
+    opt.classList.add('active');
+    saveSettings({ llm_final_summary_enabled: opt.dataset.value === 'on' });
+  })
+);
 
 // ---- upload analysis (server/upload.py: POST /api/upload-call, streamed NDJSON) ----
 const uploadView = createStreamingView({
   transcriptList: document.getElementById('uploadTranscriptList'),
-  pitchChart: makeMetricChartRenderer(pitchChartEls('upload'), { min: METRIC_DEFS.mean_pitch.min, max: METRIC_DEFS.mean_pitch.max, h: PITCH_CHART_H }),
-  gridCharts: makeGridChartRenderers((key) => metricChartEls('upload', key)),
+  pitchChart: makeEChartsLineMetric(pitchChartContainer('upload'), { min: METRIC_DEFS.mean_pitch.min, max: METRIC_DEFS.mean_pitch.max, unit: METRIC_DEFS.mean_pitch.unit, digits: METRIC_DEFS.mean_pitch.digits }),
+  gridCharts: makeGridChartRenderers((key) => metricChartContainer('upload', key)),
   acousticReadout: document.getElementById('uploadAcousticReadout'),
   emotionBadge: document.getElementById('uploadEmotionBadge'),
+  deepfakeBadge: document.getElementById('uploadDeepfakeBadge'),
   baselineReadout: document.getElementById('uploadBaselineReadout'),
-  radar: makeRadarChartRenderer(document.getElementById('uploadRadarShape')),
+  radar: makeEChartsRadar(document.getElementById('uploadRadarChart')),
+  egemapsChart: makeEChartsEgemapsBar(document.getElementById('uploadEgemapsChart')),
   badgeRow: document.getElementById('uploadBadgeRow'),
   alertsList: document.getElementById('uploadAlertsList'),
   finalSummary: document.getElementById('uploadSummary'),
@@ -1181,13 +1338,12 @@ async function analyzeUpload() {
   btn.disabled = true;
   const originalLabel = btn.textContent;
   btn.textContent = '分析中…';
+  // Reveal the container BEFORE reset() — reset() is what lazily calls echarts.init() on each
+  // chart the first time, and a container that's still display:none measures as zero width, so
+  // ECharts would size its canvas to 0px and never fix itself without an explicit later resize().
+  document.getElementById('uploadResult').style.display = 'block'; // shown immediately — chunk_update events fill it in progressively
   uploadView.reset();
   uploadChart.reset();
-  document.getElementById('uploadResult').style.display = 'block'; // shown immediately — chunk_update events fill it in progressively
-
-  file.arrayBuffer().then((buf) =>
-    renderWaveformAndSpectrogram(buf, document.getElementById('uploadWaveform'), document.getElementById('uploadSpectrogram'))
-  );
 
   const form = new FormData();
   form.append('file', file);
@@ -1235,7 +1391,11 @@ document.getElementById('btnUploadAnalyze').addEventListener('click', analyzeUpl
 // spot-checking transcript + risk judgment quality without polluting call history — results
 // here are never persisted (server/testdata.py's docstring), so revisiting the tab re-fetches
 // the clip list with a clean, unrun state each time.
-const TEST_CLIP_COUNT = 3;
+// Was 3 — silently hid any clip that didn't sort alphabetically into the first 3 per category
+// (server/testdata.py's list_test_clips() returns them sorted by filename). The corpus is now
+// 13 scam + 10 benign (docs/DESIGN.md §6's own 10-20-per-category target), so cap high enough
+// that nothing gets hidden just for having a filename late in the alphabet.
+const TEST_CLIP_COUNT = 20;
 
 function testClipCardHTML(category, filename) {
   return `
@@ -1244,24 +1404,18 @@ function testClipCardHTML(category, filename) {
       <div class="panel-title">${filename}</div>
       <button class="btn-toggle-listen test-clip-run">執行分析</button>
     </div>
-    <audio controls src="/api/test-clips/${category}/${filename}/audio"></audio>
-    <canvas class="waveform-canvas test-clip-waveform"></canvas>
-    <canvas class="spectrogram-canvas test-clip-spectrogram"></canvas>
+    <audio controls preload="none" src="/api/test-clips/${category}/${filename}/audio"></audio>
     <div class="test-clip-result" style="display:none;">
       <div class="field-help mono test-clip-summary"></div>
       <div class="badge-row test-clip-badge-row"></div>
       <div class="panel-head" style="margin-top:10px; margin-bottom:6px;">
         <div class="panel-title" style="font-size:11px;">聲學／情緒</div>
-        <span class="emo-badge emo-neutral test-clip-emotion-badge">尚無資料</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span class="deepfake-badge test-clip-deepfake-badge" title="AI 合成／複製語音機率——連續分數，非警告">AI 合成 --%</span>
+          <span class="emo-badge emo-neutral test-clip-emotion-badge">尚無資料</span>
+        </div>
       </div>
-      <div class="pitch-chart-wrap">
-        <svg viewBox="0 0 400 56" preserveAspectRatio="none">
-          <path class="pitch-area test-clip-pitch-area" d="M0,56 L400,56 Z"/>
-          <path class="pitch-line test-clip-pitch-line" d="M0,56 L400,56"/>
-          <path class="baseline-ref test-clip-pitch-baseline" d=""/>
-          <circle class="chart-endpoint test-clip-pitch-endpoint" style="fill:var(--accent)" cx="0" cy="56" r="3"/>
-        </svg>
-      </div>
+      <div class="pitch-chart-wrap test-clip-pitch-chart"></div>
       <div class="field-help mono test-clip-acoustic-readout">尚未偵測到聲音。</div>
       ${acousticExtraHTML('', true)}
       <div class="field-help mono test-clip-final-summary" style="margin-top:6px;"></div>
@@ -1274,25 +1428,21 @@ function testClipCardHTML(category, filename) {
 }
 
 // Builds a createStreamingView bound to one card's scoped elements (not global ids — several
-// cards can be on screen at once, see pitchChartEls's docstring for why makePitchChartRenderer
-// takes elements directly).
+// cards can be on screen at once, see metricChartContainerScoped's docstring for why the chart
+// containers are looked up via card.querySelector() instead of a global id).
 function createTestClipView(card) {
   return createStreamingView({
     transcriptList: card.querySelector('.test-clip-transcript'),
-    pitchChart: makeMetricChartRenderer(
-      {
-        area: card.querySelector('.test-clip-pitch-area'),
-        line: card.querySelector('.test-clip-pitch-line'),
-        endpoint: card.querySelector('.test-clip-pitch-endpoint'),
-        baselineLine: card.querySelector('.test-clip-pitch-baseline'),
-      },
-      { min: METRIC_DEFS.mean_pitch.min, max: METRIC_DEFS.mean_pitch.max, h: PITCH_CHART_H }
-    ),
-    gridCharts: makeGridChartRenderers((key) => metricChartElsScoped(card, key)),
+    pitchChart: makeEChartsLineMetric(card.querySelector('.test-clip-pitch-chart'), {
+      min: METRIC_DEFS.mean_pitch.min, max: METRIC_DEFS.mean_pitch.max, unit: METRIC_DEFS.mean_pitch.unit, digits: METRIC_DEFS.mean_pitch.digits,
+    }),
+    gridCharts: makeGridChartRenderers((key) => metricChartContainerScoped(card, key)),
     acousticReadout: card.querySelector('.test-clip-acoustic-readout'),
     emotionBadge: card.querySelector('.test-clip-emotion-badge'),
+    deepfakeBadge: card.querySelector('.test-clip-deepfake-badge'),
     baselineReadout: card.querySelector('.test-clip-baseline-readout'),
-    radar: makeRadarChartRenderer(card.querySelector('.test-clip-radar-shape')),
+    radar: makeEChartsRadar(card.querySelector('.test-clip-radar-chart')),
+    egemapsChart: makeEChartsEgemapsBar(card.querySelector('.test-clip-egemaps-chart')),
     badgeRow: card.querySelector('.test-clip-badge-row'),
     alertsList: card.querySelector('.test-clip-alerts'),
     finalSummary: card.querySelector('.test-clip-final-summary'),
@@ -1300,24 +1450,42 @@ function createTestClipView(card) {
   });
 }
 
+// server/testdata.py discovers categories from eval/test_clips/'s subdirectories rather than
+// a hardcoded list — this map is just display labels for the ones that exist today; an unknown
+// future category (e.g. real human-voice clips, or clips grouped by emotion) still renders
+// fine, just with its raw folder name as the label.
+const CATEGORY_LABELS_ZH = { benign: 'Benign（正常通話）', scam: 'Scam（詐騙通話）' };
+
+function categoryLabel(category) {
+  return CATEGORY_LABELS_ZH[category] || category;
+}
+
+// Each category renders as a collapsed <details> section (only the first starts open) — with
+// more than two categories the old flat "one long list" layout would make the page unusably
+// long, so the page grows downward as closed summaries instead.
 async function loadTestData() {
-  const benignEl = document.getElementById('testDataBenign');
-  const scamEl = document.getElementById('testDataScam');
+  const container = document.getElementById('testDataCategories');
   let clips;
   try {
     clips = await (await fetch('/api/test-clips')).json();
   } catch (err) {
-    benignEl.innerHTML = `<div class="placeholder-note">無法載入測試音檔清單：${err.message}</div>`;
-    scamEl.innerHTML = '';
+    container.innerHTML = `<div class="placeholder-note">無法載入測試音檔清單：${err.message}</div>`;
     return;
   }
-  benignEl.innerHTML = clips.benign
-    .slice(0, TEST_CLIP_COUNT)
-    .map((f) => testClipCardHTML('benign', f))
-    .join('');
-  scamEl.innerHTML = clips.scam
-    .slice(0, TEST_CLIP_COUNT)
-    .map((f) => testClipCardHTML('scam', f))
+  const categories = Object.keys(clips);
+  if (categories.length === 0) {
+    container.innerHTML = '<div class="placeholder-note">尚未找到任何測試音檔（eval/test_clips/ 底下沒有分類資料夾）。</div>';
+    return;
+  }
+  container.innerHTML = categories
+    .map((category, i) => {
+      const files = clips[category].slice(0, TEST_CLIP_COUNT);
+      return `
+      <details class="test-category"${i === 0 ? ' open' : ''}>
+        <summary class="test-category-summary"><span>${categoryLabel(category)}</span><span class="test-category-count">${files.length}</span></summary>
+        <div class="test-category-body">${files.map((f) => testClipCardHTML(category, f)).join('')}</div>
+      </details>`;
+    })
     .join('');
 }
 
@@ -1334,16 +1502,12 @@ async function runTestClip(card) {
   placeholderEl.textContent = '分析中…（逐句語音辨識／聲學/情緒會先顯示，LLM 最終研判最後才出現）';
   placeholderEl.style.display = 'block';
 
+  // Reveal the container BEFORE reset() — see analyzeUpload's matching comment: reset() is what
+  // lazily calls echarts.init() on each chart the first time, and a still-display:none container
+  // measures as zero width, so the chart's canvas would be sized to 0px and never self-correct.
+  resultEl.style.display = 'block'; // shown immediately — chunk_update events fill it in progressively
   const view = createTestClipView(card);
   view.reset();
-  resultEl.style.display = 'block'; // shown immediately — chunk_update events fill it in progressively
-
-  fetch(`/api/test-clips/${category}/${filename}/audio`)
-    .then((r) => r.arrayBuffer())
-    .then((buf) =>
-      renderWaveformAndSpectrogram(buf, card.querySelector('.test-clip-waveform'), card.querySelector('.test-clip-spectrogram'))
-    )
-    .catch((err) => console.error('Failed to load test clip audio for waveform/spectrogram', err));
 
   try {
     const res = await fetch(`/api/test-clips/${category}/${filename}/analyze`, { method: 'POST' });

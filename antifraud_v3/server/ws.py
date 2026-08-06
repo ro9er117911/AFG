@@ -141,7 +141,10 @@ async def _handle_chunk(
                 "transcript_text": result.transcript_text,
                 "acoustic": result.acoustic,
                 "emotion": result.emotion,
+                "deepfake": result.deepfake,
                 "baseline": result.baseline,
+                "egemaps": result.egemaps,
+                "egemaps_baseline": result.egemaps_baseline,
             },
             ensure_ascii=False,
         )
@@ -158,12 +161,15 @@ async def _run_and_send_final_analysis(
     pipeline over the whole accumulated call and pushes the verdict as one "final_analysis"
     message. See pipeline/chunk_worker.py's run_final_analysis.
     """
+    # A missing/misconfigured Claude provider is no longer fatal to final analysis (two-line
+    # fusion architecture, see reasoning/fusion.py) — the verdict itself comes from Line 1/2's
+    # fusion result, not Claude's own judgment, so `provider=None` still produces *a* verdict
+    # via build_synthesize_result's template fallback, just without LLM-written prose.
     try:
         provider = get_llm_provider()
     except LLMProviderError as e:
-        logger.warning("could not get an LLM provider for final analysis: %s", e)
-        await ws.send_text(json.dumps({"type": "error", "message": str(e)}, ensure_ascii=False))
-        return
+        logger.warning("could not get an LLM provider for final analysis, proceeding without it: %s", e)
+        provider = None
 
     try:
         outcome = await asyncio.to_thread(run_final_analysis, provider, call_state, hard_triggers)
@@ -171,6 +177,9 @@ async def _run_and_send_final_analysis(
         # Confirmed by real browser testing: a missing/invalid ANTHROPIC_API_KEY (or, now, a
         # missing `claude` CLI / expired subscription session) otherwise kills the whole
         # WebSocket connection with an unhandled exception, and the client never learns why.
+        # run_final_analysis catches this internally for the Claude-prose call specifically, so
+        # reaching here means something else in final analysis failed — still surfaced, not
+        # silently swallowed twice.
         logger.warning("final analysis failed: %s", e)
         await ws.send_text(json.dumps({"type": "error", "message": str(e)}, ensure_ascii=False))
         return
@@ -187,6 +196,9 @@ async def _run_and_send_final_analysis(
                 "chunk_risk_score": result.chunk_risk_score,
                 "justification": result.justification,
                 "fraud_type": result.fraud_type.model_dump(),
+                "fake_score": result.fake_score,
+                "ai_voice_flag": result.ai_voice_flag,
+                "fusion_source": result.fusion_source,
                 "audio_quality": call_state.audio_quality,  # always None for live mic calls
                 "evidence": {
                     "transcript_segment": evidence.transcript_segment,

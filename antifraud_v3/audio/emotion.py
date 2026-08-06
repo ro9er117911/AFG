@@ -19,6 +19,7 @@ import numpy as np
 import torch
 
 from ..models.TIM import TIM_Net, TIMNet, Temporal_Aware_Block, Chomp1d, SpatialDropout, WeightLayer
+from ..storage.settings_store import load_settings
 from .mfcc import get_mfcc_from_array
 
 EMOTION_LABELS = ["anger", "boredom", "disgust", "fear", "happy", "neutral", "sad"]
@@ -74,6 +75,27 @@ def load_model(model_path: Path = DEFAULT_MODEL_PATH) -> torch.nn.Module:
 def predict_emotion(
     y: np.ndarray, sr: int, window_size: float = 4.0, stride: float = 2.0, max_windows: int = 8
 ) -> tuple[str, dict[str, float]]:
+    """Dispatches to whichever emotion backend storage/settings_store.py's "emotion_backend"
+    setting selects — "wavlm" (default, detectors/emotion_wavlm.py) or "timnet" (this file's own
+    original model, kept as a fallback/comparison option). Both return the same
+    (label, {label: probability}) shape, just over different label vocabularies (see
+    detectors/emotion_wavlm.py's _LABEL_MAP for how WavLM's 9 classes map onto/alongside
+    TIMNet's 7) — callers (pipeline/chunk_worker.py) don't need to know which one ran.
+    window_size/stride/max_windows are TIMNet-specific (its sliding-window-average scheme, see
+    module docstring) and unused by the wavlm path, which runs the whole chunk through in one
+    pass.
+    """
+    backend = load_settings()["emotion_backend"]
+    if backend == "wavlm":
+        from ..detectors.emotion_wavlm import predict_emotion_wavlm
+
+        return predict_emotion_wavlm(y, sr)
+    return _predict_emotion_timnet(y, sr, window_size=window_size, stride=stride, max_windows=max_windows)
+
+
+def _predict_emotion_timnet(
+    y: np.ndarray, sr: int, window_size: float = 4.0, stride: float = 2.0, max_windows: int = 8
+) -> tuple[str, dict[str, float]]:
     """Returns (predicted_label, {label: probability}). max_windows is lower than the old
     whole-call default (30) — chunks are utterance-sized (<=15s per docs/DESIGN.md §2.1),
     not whole calls, so far fewer windows are ever actually needed.
@@ -108,15 +130,20 @@ def aggregate_emotion(probs_list: list[dict[str, float]]) -> dict[str, float]:
     """Average per-chunk emotion probability distributions into one call-level distribution —
     used once at call end (pipeline/chunk_worker.py's run_final_analysis) now that the
     reasoning engine runs once per call instead of once per chunk. Plain unweighted mean
-    across chunks; TIMNet is already demoted to soft evidence (module docstring), so this
-    doesn't need to be more sophisticated than "how much of the call, on average, read as
-    each emotion."
+    across chunks; both backends are soft evidence (module docstring / detectors/
+    emotion_wavlm.py), so this doesn't need to be more sophisticated than "how much of the
+    call, on average, read as each emotion."
+
+    Label set is read from the data itself (probs_list[0]'s keys), not the module-level
+    EMOTION_LABELS constant — that constant is TIMNet-specific; a call analyzed with the wavlm
+    backend carries a different 9-label vocabulary (see detectors/emotion_wavlm.py's
+    EMOTION_LABELS), and this function has to work for either without knowing in advance which
+    one produced its input.
     """
     if not probs_list:
         return {label: 0.0 for label in EMOTION_LABELS}
-    return {
-        label: float(np.mean([p[label] for p in probs_list])) for label in EMOTION_LABELS
-    }
+    labels = probs_list[0].keys()
+    return {label: float(np.mean([p[label] for p in probs_list])) for label in labels}
 
 
 def summarize_emotion(probabilities: dict[str, float]) -> str:

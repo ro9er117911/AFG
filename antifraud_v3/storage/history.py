@@ -147,3 +147,17 @@ def get_call_detail(call_id: int) -> dict | None:
         detail["risk_trajectory"] = json.loads(detail.pop("risk_trajectory_json") or "[]")
         detail["alerts"] = json.loads(detail.pop("alerts_json") or "[]")
         return detail
+
+
+def delete_call(call_id: int) -> bool:
+    """Returns True if a row was actually deleted (used by the API to decide 404 vs 204)."""
+    with _connect() as conn:
+        cursor = conn.execute("DELETE FROM calls WHERE id = ?", (call_id,))
+        return cursor.rowcount > 0
+
+
+def delete_all_calls() -> int:
+    """Returns the number of rows deleted, for the confirmation message."""
+    with _connect() as conn:
+        cursor = conn.execute("DELETE FROM calls")
+        return cursor.rowcount

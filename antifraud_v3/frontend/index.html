@@ -13,14 +13,27 @@
     --surface: #FFFFFF;
     --surface-2: #E8ECEA;
     --border: #D7DEDB;
-    --accent: #2F8F86;
-    --accent-soft: rgba(47, 143, 134, 0.12);
-    --risk-low: #3F8F5B;
-    --risk-low-soft: rgba(63, 143, 91, 0.12);
-    --risk-medium: #B9791A;
-    --risk-medium-soft: rgba(185, 121, 26, 0.14);
-    --risk-high: #B23A32;
-    --risk-high-soft: rgba(178, 58, 50, 0.12);
+    /* Bumped chroma/lightness vs. the original muted set (2026-08-06) — validated with
+       dataviz's validate_palette.js against this surface (#F3F5F4): chroma floor and contrast
+       now clear PASS (the old --accent measured OKLC C 0.089, just under the 0.10 floor that
+       separates "a hue" from "reads as gray"). Kept the same teal/green/amber/red hue families
+       (brand identity), just made each one less washed-out. */
+    --accent: #049185;
+    --accent-soft: rgba(4, 145, 133, 0.14);
+    --risk-low: #1F9D5C;
+    --risk-low-soft: rgba(31, 157, 92, 0.14);
+    --risk-medium: #C97A0E;
+    --risk-medium-soft: rgba(201, 122, 14, 0.16);
+    --risk-high: #D93C30;
+    --risk-high-soft: rgba(217, 60, 48, 0.14);
+    /* Per-metric categorical set for the small-multiples grid + eGeMAPS bars (2026-08-06) —
+       one hue per series instead of repeating --accent everywhere, validated with
+       validate_palette.js (chroma/lightness/contrast/CVD all PASS) against this surface. */
+    --chart-jitter: #2B6FD9;
+    --chart-shimmer: #D9631E;
+    --chart-hnr: #7A4FD1;
+    --chart-pause: #C23E7A;
+    --chart-speech-rate: #78971F;
     --shadow: 0 1px 2px rgba(20, 32, 31, 0.06), 0 8px 24px -12px rgba(20, 32, 31, 0.18);
   }
 
@@ -33,28 +46,40 @@
       --surface: #16211F;
       --surface-2: #1C2926;
       --border: #29403C;
-      --accent: #4FC2B6;
-      --accent-soft: rgba(79, 194, 182, 0.14);
-      --risk-low: #5FBF83;
-      --risk-low-soft: rgba(95, 191, 131, 0.14);
-      --risk-medium: #E3A83E;
-      --risk-medium-soft: rgba(227, 168, 62, 0.14);
-      --risk-high: #E2564C;
-      --risk-high-soft: rgba(226, 86, 76, 0.16);
+      /* Same bump for dark — the old dark accent/risk-low/risk-medium measured OKLCH L
+         0.73–0.77, above the 0.48–0.67 validated band for a #0E1614 surface (too pale/washed
+         rather than too dim), which read as exactly the "dull" the colors were flagged as. */
+      --accent: #0FA99A;
+      --accent-soft: rgba(15, 169, 154, 0.18);
+      --risk-low: #0EA872;
+      --risk-low-soft: rgba(14, 168, 114, 0.18);
+      --risk-medium: #D97706;
+      --risk-medium-soft: rgba(217, 119, 6, 0.18);
+      --risk-high: #EF4444;
+      --risk-high-soft: rgba(239, 68, 68, 0.2);
+      --chart-jitter: #5B93EC;
+      --chart-shimmer: #DE6B28;
+      --chart-hnr: #9679E0;
+      --chart-pause: #DD5C9B;
+      --chart-speech-rate: #7CA324;
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -14px rgba(0, 0, 0, 0.55);
     }
   }
   :root[data-theme="dark"] {
     --paper: #0E1614; --ink: #E8EEEC; --ink-soft: rgba(232, 238, 236, 0.64); --ink-faint: rgba(232, 238, 236, 0.4);
-    --surface: #16211F; --surface-2: #1C2926; --border: #29403C; --accent: #4FC2B6; --accent-soft: rgba(79, 194, 182, 0.14);
-    --risk-low: #5FBF83; --risk-low-soft: rgba(95, 191, 131, 0.14); --risk-medium: #E3A83E; --risk-medium-soft: rgba(227, 168, 62, 0.14);
-    --risk-high: #E2564C; --risk-high-soft: rgba(226, 86, 76, 0.16); --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -14px rgba(0, 0, 0, 0.55);
+    --surface: #16211F; --surface-2: #1C2926; --border: #29403C; --accent: #0FA99A; --accent-soft: rgba(15, 169, 154, 0.18);
+    --risk-low: #0EA872; --risk-low-soft: rgba(14, 168, 114, 0.18); --risk-medium: #D97706; --risk-medium-soft: rgba(217, 119, 6, 0.18);
+    --risk-high: #EF4444; --risk-high-soft: rgba(239, 68, 68, 0.2);
+    --chart-jitter: #5B93EC; --chart-shimmer: #DE6B28; --chart-hnr: #9679E0; --chart-pause: #DD5C9B; --chart-speech-rate: #7CA324;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -14px rgba(0, 0, 0, 0.55);
   }
   :root[data-theme="light"] {
     --paper: #F3F5F4; --ink: #14201F; --ink-soft: rgba(20, 32, 31, 0.62); --ink-faint: rgba(20, 32, 31, 0.38);
-    --surface: #FFFFFF; --surface-2: #E8ECEA; --border: #D7DEDB; --accent: #2F8F86; --accent-soft: rgba(47, 143, 134, 0.12);
-    --risk-low: #3F8F5B; --risk-low-soft: rgba(63, 143, 91, 0.12); --risk-medium: #B9791A; --risk-medium-soft: rgba(185, 121, 26, 0.14);
-    --risk-high: #B23A32; --risk-high-soft: rgba(178, 58, 50, 0.12); --shadow: 0 1px 2px rgba(20, 32, 31, 0.06), 0 8px 24px -12px rgba(20, 32, 31, 0.18);
+    --surface: #FFFFFF; --surface-2: #E8ECEA; --border: #D7DEDB; --accent: #049185; --accent-soft: rgba(4, 145, 133, 0.14);
+    --risk-low: #1F9D5C; --risk-low-soft: rgba(31, 157, 92, 0.14); --risk-medium: #C97A0E; --risk-medium-soft: rgba(201, 122, 14, 0.16);
+    --risk-high: #D93C30; --risk-high-soft: rgba(217, 60, 48, 0.14);
+    --chart-jitter: #2B6FD9; --chart-shimmer: #D9631E; --chart-hnr: #7A4FD1; --chart-pause: #C23E7A; --chart-speech-rate: #78971F;
+    --shadow: 0 1px 2px rgba(20, 32, 31, 0.06), 0 8px 24px -12px rgba(20, 32, 31, 0.18);
   }
 
   * { box-sizing: border-box; }
@@ -171,58 +196,46 @@
   .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
   .panel-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
   .panel-title { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); }
-  .risk-readout { display: flex; align-items: baseline; gap: 6px; }
-  .risk-readout .num { font-size: 26px; font-weight: 700; }
-  .risk-readout .unit { font-size: 12px; color: var(--ink-faint); }
   .risk-pill { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.02em; }
   .risk-pill.low { color: var(--risk-low); background: var(--risk-low-soft); }
   .risk-pill.medium { color: var(--risk-medium); background: var(--risk-medium-soft); }
   .risk-pill.high { color: var(--risk-high); background: var(--risk-high-soft); }
 
-  .chart-wrap { position: relative; height: 92px; }
-  .chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
-  .chart-grid line { stroke: var(--border); stroke-width: 1; }
-  .chart-area { fill: url(#areaGradCalm); transition: d .3s ease; }
-  .chart-area.alert { fill: url(#areaGradAlert); }
-  .chart-line { fill: none; stroke: var(--risk-low); stroke-width: 2; transition: d .3s ease; }
-  .chart-line.alert { stroke: var(--risk-high); }
-  .chart-endpoint { fill: var(--risk-low); }
-  .chart-endpoint.alert { fill: var(--risk-high); }
+  /* ---- ECharts-rendered risk gauge — replaces the old single-point "trend line" (the
+     pipeline only ever produces one risk score per call now, so a line chart had nothing to
+     show a trend of; a gauge actually represents what the data is: one 0-100 reading). ---- */
+  .risk-gauge-row { display: flex; flex-direction: column; align-items: center; }
+  .risk-gauge { width: 100%; max-width: 260px; height: 150px; }
 
-  /* Live acoustic (pitch) chart — separate from the risk chart above: this one streams during
-     the call itself (ASR/acoustic/emotion, no LLM), the risk chart only gets one point once
-     the end-of-call LLM analysis finishes. See pipeline/chunk_worker.py. */
-  .pitch-chart-wrap { position: relative; height: 56px; }
-  .pitch-chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
-  .pitch-area { fill: var(--accent); opacity: 0.1; }
-  .pitch-line { fill: none; stroke: var(--accent); stroke-width: 2; transition: d .3s ease; }
-  .baseline-ref { stroke: var(--ink-faint); stroke-width: 1; stroke-dasharray: 3 3; }
+  /* Live acoustic (pitch) chart — separate from the risk gauge above: this one streams during
+     the call itself (ASR/acoustic/emotion, no LLM), the risk gauge only gets one reading once
+     the end-of-call LLM analysis finishes. See pipeline/chunk_worker.py. ECharts renders
+     directly into this container div (no child markup needed). */
+  .pitch-chart-wrap { height: 64px; }
 
   /* ---- 3a: small multi-metric sparkline grid (jitter/shimmer/HNR/pause/speech-rate) ---- */
   .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
   .metric-cell { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
   .metric-cell-label { font-size: 10px; font-weight: 700; letter-spacing: 0.03em; color: var(--ink-faint); text-transform: uppercase; margin-bottom: 4px; }
-  .metric-chart-wrap { position: relative; height: 34px; }
-  .metric-chart-wrap svg { width: 100%; height: 100%; overflow: visible; }
-  .metric-area { fill: var(--accent); opacity: 0.12; }
-  .metric-line { fill: none; stroke: var(--accent); stroke-width: 1.6; transition: d .3s ease; }
-  .metric-cell-val { font-size: 11px; margin-top: 3px; color: var(--ink-soft); }
+  .metric-chart-wrap { height: 40px; }
 
   /* ---- 3b: baseline readout ---- */
   .baseline-readout { font-size: 12px; color: var(--ink-faint); margin-top: 8px; line-height: 1.6; }
 
-  /* ---- 3c: 8-dim acoustic profile radar chart — visualization only, see disclaimer text ---- */
+  /* ---- 3c: 8-dim acoustic profile radar chart (ECharts native radar) — visualization only,
+     see disclaimer text. ---- */
   .radar-wrap { position: relative; }
-  .radar-wrap svg { width: 100%; height: auto; max-width: 320px; display: block; margin: 0 auto; }
-  .radar-grid-ring { fill: none; stroke: var(--border); stroke-width: 1; }
-  .radar-axis-line { stroke: var(--border); stroke-width: 1; }
-  .radar-axis-label { font-size: 9px; fill: var(--ink-faint); text-anchor: middle; }
-  .radar-shape { fill: var(--accent); fill-opacity: 0.18; stroke: var(--accent); stroke-width: 1.6; transition: d .3s ease; }
+  .radar-chart { width: 100%; max-width: 320px; height: 260px; margin: 0 auto; }
   .radar-disclaimer { font-size: 11px; color: var(--ink-faint); text-align: center; margin-top: 4px; line-height: 1.5; }
 
-  /* ---- 3d: waveform + spectrogram (upload / test-data only) ---- */
-  .waveform-canvas, .spectrogram-canvas { width: 100%; height: 80px; display: block; border-radius: 8px; background: var(--surface-2); margin-top: 8px; }
-  .spectrogram-canvas { height: 110px; }
+  /* ---- eGeMAPS (openSMILE) full 88-dim detail panel — collapsed by default and height-capped
+     with internal scroll, so 88 rows never blow up the page layout (the chart itself is drawn
+     taller than its visible window; this wrapper is what actually clips/scrolls it). ---- */
+  .egemaps-details { margin-top: 14px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .egemaps-summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+  .egemaps-note { font-size: 11px; color: var(--ink-faint); margin: 8px 0; line-height: 1.5; }
+  .egemaps-scroll { max-height: 420px; overflow-y: auto; border-top: 1px solid var(--border); padding-top: 6px; }
+  .egemaps-chart { width: 100%; }
 
   /* ---- fraud-type + audio-quality badges (shown in 最終研判 panel) ---- */
   .badge-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
@@ -232,6 +245,14 @@
     background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--border);
   }
   .info-badge.narrowband { background: var(--risk-medium-soft); color: var(--risk-medium); border-color: transparent; }
+  /* line1 = Line 1 (聲學／AI合成語音偵測), line2 = Line 2 (文字語意／話術詐騙偵測) — distinct
+     colors so the two independent detection signals (see reasoning/fusion.py) read as separate
+     claims, not one undifferentiated risk badge. Neither uses risk-high red: this chip is
+     always shown now as a plain continuous score (not a conditional pop-up warning), so its
+     color says "which detection line", not "danger" — the real warning lives in the alert
+     banner and 最終研判 text. */
+  .info-badge.line1 { background: color-mix(in srgb, var(--chart-hnr) 16%, transparent); color: var(--chart-hnr); border-color: transparent; }
+  .info-badge.line2 { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
 
   .emo-badge {
     display: inline-flex; align-items: center; font-size: 11px; font-weight: 700;
@@ -241,6 +262,21 @@
   .emo-badge.emo-medium { background: var(--risk-medium-soft); color: var(--risk-medium); }
   .emo-badge.emo-high { background: var(--risk-high-soft); color: var(--risk-high); }
   .emo-badge.emo-neutral { background: var(--surface-2); color: var(--ink-faint); }
+
+  /* Deepfake score — a continuous, always-shown readout ("how AI-like does this sound"), not a
+     pop-up warning: no alert icon/banner styling, just a mono-numeral pill like the emo-badge
+     next to it. Colored by --chart-hnr (violet) at low opacity always, opacity rising with the
+     score itself — still visibly "louder" near the fake_score threshold without looking like an
+     alarm. The real alert (banner + final-判斷 text) already carries the actual warning. */
+  .deepfake-badge {
+    display: inline-flex; align-items: center; font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 999px; letter-spacing: 0.02em;
+    background: var(--surface-2); color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+  /* A notably high score still reads as "worth noticing" via the brand accent, not risk-red —
+     the actual warning (alert banner / final-研判 text) is what owns "danger" styling. */
+  .deepfake-badge.deepfake-notable { background: var(--accent-soft); color: var(--accent); }
 
   .evidence-details { margin-top: 12px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
   .evidence-details summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
@@ -263,12 +299,26 @@
   .t-justification { font-size: 12px; color: var(--ink-faint); margin-top: 3px; line-height: 1.5; }
   .t-row.flagged .t-justification { color: var(--risk-high); opacity: 0.85; }
 
+  /* ---- Test Data screen: one collapsible <details> section per category, so adding more
+     categories later (e.g. real-voice clips, or clips grouped by emotion) grows the page
+     downward as closed summaries instead of one long flat list of cards. ---- */
+  .test-category { margin-bottom: 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); overflow: hidden; }
+  .test-category-summary {
+    list-style: none; cursor: pointer; padding: 14px 16px; display: flex; align-items: center;
+    justify-content: space-between; font-size: 13px; font-weight: 700;
+  }
+  .test-category-summary::-webkit-details-marker { display: none; }
+  .test-category-summary::after { content: "\25BE"; color: var(--ink-faint); transition: transform .15s ease; }
+  .test-category[open] .test-category-summary::after { transform: rotate(180deg); }
+  .test-category-count { font-weight: 400; color: var(--ink-faint); margin-left: 8px; }
+  .test-category-body { padding: 0 16px 16px; }
+
   .test-clip-card { margin-bottom: 14px; }
   .test-clip-card audio { width: 100%; margin-bottom: 12px; }
   .test-clip-card .panel-title { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 700; color: var(--ink); }
 
   .history-row {
-    display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 16px;
+    display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 16px;
     background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
     padding: 14px 16px; margin-bottom: 8px; box-shadow: var(--shadow); cursor: pointer;
   }
@@ -276,6 +326,11 @@
   .history-when { font-size: 13px; font-weight: 600; }
   .history-caller { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
   .history-dur { font-size: 12px; color: var(--ink-soft); }
+  .history-delete {
+    border: none; background: transparent; color: var(--ink-faint); font-size: 18px; line-height: 1;
+    cursor: pointer; padding: 4px 6px; border-radius: 6px;
+  }
+  .history-delete:hover { color: var(--risk-high); background: var(--risk-high-soft); }
   .placeholder-note {
     font-size: 13px; color: var(--ink-faint); background: var(--surface-2); border: 1px dashed var(--border);
     border-radius: 12px; padding: 14px 16px; line-height: 1.6;
@@ -374,34 +429,10 @@
     <div class="panel">
       <div class="panel-head">
         <div class="panel-title">最終研判</div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div class="risk-readout">
-            <span class="num mono" id="riskNum">0</span><span class="unit">/ 100</span>
-          </div>
-          <span class="risk-pill low" id="riskPill">低風險</span>
-        </div>
       </div>
-      <div class="chart-wrap">
-        <svg viewBox="0 0 400 92" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="areaGradCalm" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="var(--risk-low)" stop-opacity="0.28"/>
-              <stop offset="100%" stop-color="var(--risk-low)" stop-opacity="0"/>
-            </linearGradient>
-            <linearGradient id="areaGradAlert" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="var(--risk-high)" stop-opacity="0.32"/>
-              <stop offset="100%" stop-color="var(--risk-high)" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-          <g class="chart-grid">
-            <line x1="0" y1="23" x2="400" y2="23"/>
-            <line x1="0" y1="46" x2="400" y2="46"/>
-            <line x1="0" y1="69" x2="400" y2="69"/>
-          </g>
-          <path id="chartArea" class="chart-area" d="M0,92 L400,92 Z"/>
-          <path id="chartLine" class="chart-line" d="M0,92 L400,92"/>
-          <circle id="chartEndpoint" class="chart-endpoint" cx="0" cy="92" r="4"/>
-        </svg>
+      <div class="risk-gauge-row">
+        <div class="risk-gauge" id="riskGauge"></div>
+        <span class="risk-pill low" id="riskPill">低風險</span>
       </div>
       <div class="field-help" id="finalJustification" style="margin-top:12px;">
         聲學／語音辨識／情緒分析在通話中即時顯示於下方；完整研判會在「結束監聽」後才跑一次，結果顯示在這裡。
@@ -413,16 +444,12 @@
     <div class="panel">
       <div class="panel-head">
         <div class="panel-title">聲學／情緒（即時）</div>
-        <span class="emo-badge emo-neutral" id="liveEmotionBadge">尚無資料</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span class="deepfake-badge" id="liveDeepfakeBadge" title="AI 合成／複製語音機率——連續分數，非警告">AI 合成 --%</span>
+          <span class="emo-badge emo-neutral" id="liveEmotionBadge">尚無資料</span>
+        </div>
       </div>
-      <div class="pitch-chart-wrap">
-        <svg viewBox="0 0 400 56" preserveAspectRatio="none">
-          <path class="pitch-area" id="livePitchArea" d="M0,56 L400,56 Z"/>
-          <path class="pitch-line" id="livePitchLine" d="M0,56 L400,56"/>
-          <path class="baseline-ref" id="livePitchBaseline" d=""/>
-          <circle class="chart-endpoint" style="fill:var(--accent)" id="livePitchEndpoint" cx="0" cy="56" r="3"/>
-        </svg>
-      </div>
+      <div class="pitch-chart-wrap" id="livePitchChart"></div>
       <div class="field-help mono" id="liveAcousticReadout" style="margin-top:8px; margin-bottom:0;">尚未偵測到聲音。</div>
       <div id="liveAcousticExtra"></div>
     </div>
@@ -453,24 +480,14 @@
 
     <div id="uploadResult" style="display:none;">
       <div class="panel">
-        <div class="panel-head"><div class="panel-title">波形與頻譜圖</div></div>
-        <canvas class="waveform-canvas" id="uploadWaveform"></canvas>
-        <canvas class="spectrogram-canvas" id="uploadSpectrogram"></canvas>
-      </div>
-
-      <div class="panel">
         <div class="panel-head">
           <div class="panel-title">聲學／情緒</div>
-          <span class="emo-badge emo-neutral" id="uploadEmotionBadge">尚無資料</span>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <span class="deepfake-badge" id="uploadDeepfakeBadge" title="AI 合成／複製語音機率——連續分數，非警告">AI 合成 --%</span>
+            <span class="emo-badge emo-neutral" id="uploadEmotionBadge">尚無資料</span>
+          </div>
         </div>
-        <div class="pitch-chart-wrap">
-          <svg viewBox="0 0 400 56" preserveAspectRatio="none">
-            <path class="pitch-area" id="uploadPitchArea" d="M0,56 L400,56 Z"/>
-            <path class="pitch-line" id="uploadPitchLine" d="M0,56 L400,56"/>
-            <path class="baseline-ref" id="uploadPitchBaseline" d=""/>
-            <circle class="chart-endpoint" style="fill:var(--accent)" id="uploadPitchEndpoint" cx="0" cy="56" r="3"/>
-          </svg>
-        </div>
+        <div class="pitch-chart-wrap" id="uploadPitchChart"></div>
         <div class="field-help mono" id="uploadAcousticReadout" style="margin-top:8px; margin-bottom:0;">尚未偵測到聲音。</div>
         <div id="uploadAcousticExtra"></div>
       </div>
@@ -478,26 +495,10 @@
       <div class="panel">
         <div class="panel-head">
           <div class="panel-title">最終研判</div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div class="risk-readout">
-              <span class="num mono" id="uploadRiskNum">0</span><span class="unit">/ 100</span>
-            </div>
-            <span class="risk-pill low" id="uploadRiskPill">低風險</span>
-          </div>
         </div>
-        <div class="chart-wrap">
-          <svg viewBox="0 0 400 92" preserveAspectRatio="none">
-            <!-- reuses #areaGradCalm/#areaGradAlert defined in the live screen's svg above —
-                 SVG gradient refs resolve by id anywhere in the document, no need to redefine -->
-            <g class="chart-grid">
-              <line x1="0" y1="23" x2="400" y2="23"/>
-              <line x1="0" y1="46" x2="400" y2="46"/>
-              <line x1="0" y1="69" x2="400" y2="69"/>
-            </g>
-            <path id="uploadChartArea" class="chart-area" d="M0,92 L400,92 Z"/>
-            <path id="uploadChartLine" class="chart-line" d="M0,92 L400,92"/>
-            <circle id="uploadChartEndpoint" class="chart-endpoint" cx="0" cy="92" r="4"/>
-          </svg>
+        <div class="risk-gauge-row">
+          <div class="risk-gauge" id="uploadRiskGauge"></div>
+          <span class="risk-pill low" id="uploadRiskPill">低風險</span>
         </div>
         <div class="field-help mono" id="uploadSummary" style="margin-top:10px;"></div>
         <div class="badge-row" id="uploadBadgeRow"></div>
@@ -519,37 +520,27 @@
   <!-- ============ HISTORY ============ -->
   <div class="screen" id="screen-history">
     <div id="historyListView">
-      <div class="panel-title" style="margin-bottom:12px;">最近通話</div>
+      <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px;">
+        <div class="panel-title" style="margin-bottom:0;">最近通話</div>
+        <button class="btn-toggle-listen btn-stop" id="btnHistoryDeleteAll" style="display:none;">刪除全部</button>
+      </div>
       <div id="historyList">
         <div class="placeholder-note" id="historyPlaceholder">還沒有通話紀錄——結束一次「開始監聽」就會出現在這裡。</div>
       </div>
     </div>
 
     <div id="historyDetailView" style="display:none;">
-      <button class="btn-toggle-listen" id="btnHistoryBack" style="margin-bottom:14px;">← 返回列表</button>
+      <div style="display:flex; justify-content:space-between; margin-bottom:14px;">
+        <button class="btn-toggle-listen" id="btnHistoryBack">← 返回列表</button>
+        <button class="btn-toggle-listen btn-stop" id="btnHistoryDelete">刪除這筆紀錄</button>
+      </div>
       <div class="panel">
         <div class="panel-head">
           <div class="panel-title">最終研判</div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div class="risk-readout">
-              <span class="num mono" id="historyRiskNum">0</span><span class="unit">/ 100</span>
-            </div>
-            <span class="risk-pill low" id="historyRiskPill">低風險</span>
-          </div>
         </div>
-        <div class="chart-wrap">
-          <svg viewBox="0 0 400 92" preserveAspectRatio="none">
-            <!-- reuses #areaGradCalm/#areaGradAlert defined in the live screen's svg —
-                 SVG gradient refs resolve by id anywhere in the document -->
-            <g class="chart-grid">
-              <line x1="0" y1="23" x2="400" y2="23"/>
-              <line x1="0" y1="46" x2="400" y2="46"/>
-              <line x1="0" y1="69" x2="400" y2="69"/>
-            </g>
-            <path id="historyChartArea" class="chart-area" d="M0,92 L400,92 Z"/>
-            <path id="historyChartLine" class="chart-line" d="M0,92 L400,92"/>
-            <circle id="historyChartEndpoint" class="chart-endpoint" cx="0" cy="92" r="4"/>
-          </svg>
+        <div class="risk-gauge-row">
+          <div class="risk-gauge" id="historyRiskGauge"></div>
+          <span class="risk-pill low" id="historyRiskPill">低風險</span>
         </div>
         <div class="field-help mono" id="historyDetailSummary" style="margin-top:10px;"></div>
       </div>
@@ -574,11 +565,7 @@
       檢查逐字稿與判斷依據是否合理。這裡的結果不會存進歷史紀錄。
     </div>
 
-    <div class="panel-title" style="margin-bottom:12px;">Benign（正常通話）</div>
-    <div id="testDataBenign"></div>
-
-    <div class="panel-title" style="margin:22px 0 12px;">Scam（詐騙通話）</div>
-    <div id="testDataScam"></div>
+    <div id="testDataCategories"></div>
   </div>
 
   <!-- ============ SETTINGS ============ -->
@@ -596,11 +583,55 @@
 
     <div class="panel">
       <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label">LLM 最終研判文字</div>
+        <div class="field-help">通話結束後要不要呼叫 LLM 產生「最終研判」的說明文字。關閉時風險等級／詐騙類型判定不受影響（一律由 Line 1／Line 2 兩條偵測線決定，見 reasoning/fusion.py），只是說明文字改用固定模板，不呼叫 LLM。</div>
+        <div class="effort-row" id="llmSummaryRow">
+          <div class="effort-opt" data-value="off">關閉（預設）</div>
+          <div class="effort-opt" data-value="on">開啟</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="field-group" style="margin-bottom:0;">
         <div class="field-label">推理模型</div>
         <div class="field-help">整通電話結束後才會呼叫一次（見 pipeline/chunk_worker.py 的 run_final_analysis）。變更後下一通電話開始生效。</div>
         <select class="field-input" id="modelSelect">
           <option value="claude-opus-5">claude-opus-5（預設，品質優先）</option>
           <option value="claude-sonnet-5">claude-sonnet-5（速度/成本平衡）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label">Line 2（話術詐騙判定）</div>
+        <div class="field-help">claude 直接沿用上面的推理提供者/模型，純文字判定，不載入本機模型，速度較快（預設）；qwen2audio 改用本機 AntiFraud-SFT（Qwen2-Audio-7B）音訊模型判定，較慢但不需要 LLM 額度。</div>
+        <select class="field-input" id="line2Select">
+          <option value="claude">claude（文字語意，較快，預設）</option>
+          <option value="qwen2audio">qwen2audio（本機音訊模型）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label">語音轉文字 ASR</div>
+        <div class="field-help">whisper（faster-whisper，預設）或 sensevoice（FunASR SenseVoiceSmall）。Line 2 選 claude 時，逐字稿品質直接影響判定準確度。</div>
+        <select class="field-input" id="asrSelect">
+          <option value="whisper">whisper（預設）</option>
+          <option value="sensevoice">sensevoice</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label">情緒辨識模型</div>
+        <div class="field-help">wavlm（預設，WavLM-large 微調，9 類情緒 + INTERSPEECH 2025 情緒辨識競賽驗證過）或 timnet（原本的模型，保留作為比較/備用選項）。</div>
+        <select class="field-input" id="emotionBackendSelect">
+          <option value="wavlm">wavlm（預設）</option>
+          <option value="timnet">timnet</option>
         </select>
       </div>
     </div>
@@ -628,6 +659,7 @@
   </div>
 </div>
 
+<script src="vendor/echarts.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

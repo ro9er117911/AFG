@@ -21,10 +21,10 @@ if str(REPO_ROOT) not in sys.path:
 
 from antifraud_v3.llm.base import LLMProvider  # noqa: E402
 from antifraud_v3.reasoning.schemas import (  # noqa: E402
+    ClaudeJustification,
     DiscriminateResult,
     FraudTypeClassification,
     ReflectResult,
-    SynthesizeResult,
 )
 
 DEFAULT_FRAUD_TYPE = FraudTypeClassification(fraud_type="unclassified", confidence="none", justification="無明顯詐騙類型敘事。")
@@ -35,21 +35,20 @@ class FakeLLMProvider(LLMProvider):
 
     Returns a canned response per schema type by default (all "nothing interesting
     happened") so any code built on top of the reasoning engine can be tested without
-    live API access; construct with `synthesize_result=` to control the risk verdict a
-    test cares about. `self.calls` records every request for assertions about how many
-    times / in what order the provider was actually invoked (e.g. reflect.py's
-    short-circuit-when-nothing-flagged path should make zero calls).
+    live API access; construct with `claude_justification=` to control the prose a test cares
+    about (the reasoning pipeline no longer decides risk_level/fraud_type itself — see
+    reasoning/fusion.py — so there's no risk verdict left for this fake to control). `self.calls`
+    records every request for assertions about how many times / in what order the provider was
+    actually invoked (e.g. reflect.py's short-circuit-when-nothing-flagged path should make zero
+    calls).
     """
 
-    def __init__(self, synthesize_result: SynthesizeResult | None = None):
+    def __init__(self, claude_justification: ClaudeJustification | None = None):
         self.calls: list[tuple[str, str, str]] = []
-        self._synthesize_result = synthesize_result or SynthesizeResult(
-            risk_level="low",
-            chunk_risk_score=0,
+        self._claude_justification = claude_justification or ClaudeJustification(
             hard_triggers=[],
             justification="正常對話，沒有偵測到詐騙跡象。",
             case_memory_update="",
-            fraud_type=DEFAULT_FRAUD_TYPE,
         )
 
     def structured_complete(self, system, user_content, schema):
@@ -58,8 +57,8 @@ class FakeLLMProvider(LLMProvider):
             return DiscriminateResult(stage_evidence=[], overall_note="無明顯證據。")
         if schema is ReflectResult:
             return ReflectResult(reflected_stages=[])
-        if schema is SynthesizeResult:
-            return self._synthesize_result
+        if schema is ClaudeJustification:
+            return self._claude_justification
         raise AssertionError(f"FakeLLMProvider got an unexpected schema: {schema}")
 
 

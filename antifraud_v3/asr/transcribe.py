@@ -11,9 +11,12 @@ import ctranslate2
 import numpy as np
 from faster_whisper import WhisperModel
 
+from ..storage.settings_store import load_settings
+
 logger = logging.getLogger(__name__)
 
 _model_cache: WhisperModel | None = None
+_sensevoice_cache = None
 
 
 def load_whisper_model() -> WhisperModel:
@@ -41,9 +44,41 @@ def load_whisper_model() -> WhisperModel:
     return _model_cache
 
 
-def transcribe_chunk(y: np.ndarray, sr: int, language: str = "zh") -> str:
+def load_sensevoice_model():
+    """Lazily imports funasr — a new, optional dependency (see requirements.txt) — so
+    environments that only ever select "whisper" (the default) never pay its import cost or
+    need it installed at all."""
+    global _sensevoice_cache
+    if _sensevoice_cache is None:
+        import torch
+        from funasr import AutoModel
+
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        _sensevoice_cache = AutoModel(
+            model="iic/SenseVoiceSmall", trust_remote_code=True, device=device, disable_update=True
+        )
+    return _sensevoice_cache
+
+
+def _transcribe_whisper(audio: np.ndarray, language: str) -> str:
     model = load_whisper_model()
-    # faster-whisper resamples internally if needed, but expects float32 in [-1, 1].
-    audio = y.astype(np.float32) if y.dtype != np.float32 else y
     segments, _info = model.transcribe(audio, language=language)
     return "".join(segment.text for segment in segments).strip()
+
+
+def _transcribe_sensevoice(audio: np.ndarray, language: str) -> str:
+    from funasr.utils.postprocess_utils import rich_transcription_postprocess
+
+    model = load_sensevoice_model()
+    result = model.generate(input=audio, cache={}, language=language, use_itn=True, batch_size_s=60)
+    return rich_transcription_postprocess(result[0]["text"]).strip()
+
+
+def transcribe_chunk(y: np.ndarray, sr: int, language: str = "zh") -> str:
+    # Both backends expect float32 in [-1, 1] and resample/assume 16kHz internally — this app's
+    # pipeline already guarantees 16kHz mono for every chunk reaching here (see audio/vad.py).
+    audio = y.astype(np.float32) if y.dtype != np.float32 else y
+    backend = load_settings()["asr_backend"]
+    if backend == "sensevoice":
+        return _transcribe_sensevoice(audio, language)
+    return _transcribe_whisper(audio, language)

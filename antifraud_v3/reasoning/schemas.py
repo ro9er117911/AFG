@@ -78,6 +78,35 @@ class FraudTypeClassification(BaseModel):
     justification: str = Field(description="One or two sentences citing the specific transcript content this classification is based on.")
 
 
+class ClaudeJustification(BaseModel):
+    """What the (now much smaller) synthesize() step actually asks Claude for: the hard-trigger
+    checklist evaluation plus prose consistent with a verdict it's *handed*, not one it invents.
+    See reasoning/fusion.py's module docstring for why the risk-defining fields moved out of
+    Claude's own judgment — this is the LLM-output-shaped subset of SynthesizeResult that's
+    still worth an LLM call, exactly 3 of its 6 fields, copied verbatim."""
+
+    hard_triggers: list[HardTriggerHit]
+    justification: str = Field(description="Short natural-language justification, kept for audit/human review and shown in the alert banner UI.")
+    case_memory_update: str = Field(description="Updated rolling case-memory summary, replaces CallState.case_memory.")
+
+
+class FusionResult(BaseModel):
+    """reasoning/fusion.py's decision object — never sent to or returned by an LLM. The
+    authoritative fraud verdict for a call, per the user's own 3-branch priority spec: Line 1
+    (AI/cloned-voice) fake_score high wins outright; else Line 2 (AntiFraud-Qwen2Audio)
+    is_fraud=true; else normal. Fed into synthesize() as input (see fusion.py) rather than
+    applied as a post-hoc patch over Claude's output, so justification prose is never generated
+    from a different verdict than the one actually being reported."""
+
+    fusion_source: Literal["line1_ai_voice", "line2_semantic", "none"]
+    fake_score: float = Field(ge=0, le=1)
+    ai_voice_flag: bool
+    is_fraud: bool
+    risk_level: Literal["low", "medium", "high"]
+    chunk_risk_score: int = Field(ge=0, le=100)
+    fraud_type: FraudTypeClassification
+
+
 class SynthesizeResult(BaseModel):
     risk_level: Literal["low", "medium", "high"]
     chunk_risk_score: int = Field(ge=0, le=100, description="Informational only — not arithmetically summed across chunks.")
@@ -85,3 +114,9 @@ class SynthesizeResult(BaseModel):
     justification: str = Field(description="Short natural-language justification, kept for audit/human review and shown in the alert banner UI.")
     case_memory_update: str = Field(description="Updated rolling case-memory summary, replaces CallState.case_memory.")
     fraud_type: FraudTypeClassification
+    # Added for the two-line (XLS-R deepfake + AntiFraud-Qwen2Audio) fusion — see
+    # reasoning/fusion.py. risk_level/chunk_risk_score/fraud_type above are now sourced from
+    # FusionResult (via build_synthesize_result), not derived by Claude itself.
+    fake_score: float = Field(default=0.0, ge=0, le=1, description="Line 1's max per-chunk AI/cloned-voice score for this call.")
+    ai_voice_flag: bool = Field(default=False, description="True if fake_score crossed the threshold — Line 1 fired, takes priority over Line 2.")
+    fusion_source: Literal["line1_ai_voice", "line2_semantic", "none"] = "none"

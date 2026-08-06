@@ -36,6 +36,7 @@ EMPTY_ACOUSTIC_FEATURES = {
 }
 FAKE_COMPACT_ACOUSTIC = {"mean_pitch": None, "mean_volume": 0.0, "jitter_local": 0.0, "shimmer_local": 0.0, "hnr": 0.0, "pause_ratio": 0.0, "speech_rate_variation": 0.0}
 FAKE_COMPACT_EMOTION = {"label": "neutral", "top_prob": 0.9}
+FAKE_COMPACT_DEEPFAKE = {"fake_score": 0.0, "label": "real"}
 
 
 def parse_ndjson(text: str) -> list[dict]:
@@ -61,7 +62,11 @@ def make_fake_process_chunk_signals(scripted_texts):
         call_state.record_chunk_signals(text, speaker_guess, EMPTY_ACOUSTIC_FEATURES, {}, timestamp=timestamp)
         alert = call_state.check_live_hard_trigger(text)
         return ChunkSignalsResult(
-            transcript_text=text, acoustic=FAKE_COMPACT_ACOUSTIC, emotion=FAKE_COMPACT_EMOTION, alert=alert
+            transcript_text=text,
+            acoustic=FAKE_COMPACT_ACOUSTIC,
+            emotion=FAKE_COMPACT_EMOTION,
+            deepfake=FAKE_COMPACT_DEEPFAKE,
+            alert=alert,
         )
 
     return fake

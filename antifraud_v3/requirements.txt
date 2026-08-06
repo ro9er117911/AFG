@@ -5,8 +5,16 @@ numpy>=1.24.0
 # Audio processing (parselmouth pitch tracker only — CREPE was dropped, see README.md § Architecture)
 librosa>=0.10.0
 praat-parselmouth>=0.4.3
+# eGeMAPSv02 standardized functionals (audio/egemaps.py) — separate from the hand-rolled
+# pitch/jitter/shimmer set above, see that module's docstring.
+opensmile>=2.5.0
 faster-whisper>=0.9.0
 silero-vad>=5.1
+# Optional ASR backend (asr/transcribe.py, storage/settings_store.py's "asr_backend" setting) —
+# only imported lazily when asr_backend="sensevoice" is selected. NOTE: this project also pins
+# fairseq==0.12.2 below for Line 1; if funasr's transitive deps conflict with that pin, dropping
+# back to the default "whisper" backend is the fallback, not a deep dependency resolution.
+funasr>=1.1.0
 
 # Real-time server
 fastapi>=0.115.0
@@ -24,4 +32,27 @@ python-dotenv>=1.0.0
 # Development
 pytest>=7.4.0
 black>=23.9.0
-soundfile>=0.12.0  # eval/run_test_set.py only
+soundfile>=0.12.0  # eval/run_test_set.py, server/upload.py's file decoding
+
+# Local audio-native fraud detectors (detectors/) — see config.py for model IDs/settings
+transformers>=4.51.3
+accelerate>=1.10.1
+huggingface_hub>=0.31.1
+# Line 1 (detectors/deepfake_voice.py, models/xlsr_deepfake.py) needs fairseq's
+# Wav2Vec2Model — this is the nii-yamagishilab/xls-r-2b-anti-deepfake model's own stated
+# dependency, not a choice made in this project. IMPORTANT: fairseq==0.12.2's PyPI package has
+# broken dependency metadata (an `omegaconf<2.1` specifier using old `.*` syntax) that makes
+# `pip install -r requirements.txt` fail outright with any pip>=24.1. Confirmed fix, matching
+# the model's own setup instructions: run `pip install "pip==24.0"` in this environment BEFORE
+# installing this file's requirements, then reinstalling a newer pip afterward is fine (pip's
+# own version doesn't affect already-installed packages at runtime).
+fairseq==0.12.2
+# Line 2 (detectors/scam_semantic.py) — 4-bit quantized load of JimmyMa99/AntiFraud-SFT
+# (Qwen2-Audio-7B-Instruct fine-tune). No sentencepiece needed — confirmed directly, this
+# model's tokenizer loads fine without it.
+bitsandbytes>=0.50.0
+# Optional emotion backend (detectors/emotion_wavlm.py, models/wavlm_emotion.py) — small,
+# standalone package, only imported by that module's WavLMEncoderLayerStableLayerNorm class
+# definition (matches the upstream tiantiaf/vox-profile checkpoint's own architecture, even
+# though this specific checkpoint's finetune_method doesn't actually exercise the LoRA path).
+loralib>=0.1.2

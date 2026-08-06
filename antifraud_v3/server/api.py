@@ -25,11 +25,26 @@ def api_get_call(call_id: int):
     return detail
 
 
+@router.delete("/calls/{call_id}", status_code=204)
+def api_delete_call(call_id: int):
+    if not history.delete_call(call_id):
+        raise HTTPException(status_code=404, detail="call not found")
+
+
+@router.delete("/calls")
+def api_delete_all_calls():
+    return {"deleted": history.delete_all_calls()}
+
+
 class SettingsUpdate(BaseModel):
     llm_provider: str | None = None
     llm_model: str | None = None
     llm_effort: str | None = None
     hard_triggers: list[str] | None = None
+    line2_backend: str | None = None
+    asr_backend: str | None = None
+    llm_final_summary_enabled: bool | None = None
+    emotion_backend: str | None = None
 
 
 @router.get("/settings")

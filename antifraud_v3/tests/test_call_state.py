@@ -156,35 +156,12 @@ def test_record_chunk_signals_timestamp_override_used_for_batch_upload():
     assert cs.chunk_signals[-1].timestamp == 42.5
 
 
-# ---- baseline (unchanged behavior, still exercised through the new entry points) ----
+# ---- baseline: gated on chunk count, not audio/wall-clock time (see maybe_set_baseline's
+# docstring — a time-based gate left short pre-recorded clips with little or no post-baseline
+# chart movement, confirmed directly against real eval test clips) ----
 
 
-def test_baseline_not_set_before_window_elapses():
-    cs = CallState()
-    features = {
-        "pitch": {"mean_pitch": 200.0},
-        "volume": {"mean_volume": 0.5},
-        "speech_rate": {"speech_rate_variation": 0.1},
-    }
-    cs.maybe_set_baseline(features)
-    assert cs.baseline is None
-
-
-def test_baseline_set_after_window_elapses():
-    cs = CallState()
-    cs._started_at -= CallState.BASELINE_WINDOW_S + 1  # simulate time having passed
-    features = {
-        "pitch": {"mean_pitch": 210.0, "std_pitch": 5.0, "pitch_instability": 1.2},
-        "volume": {"mean_volume": 0.6, "std_volume": 0.05},
-        "tremor": {"jitter_local": 0.8, "shimmer_local": 2.5, "hnr": 18.0},
-        "speech_rate": {"speech_rate_variation": 0.12, "pause_ratio": 10.0},
-    }
-    cs.maybe_set_baseline(features)
-    assert cs.baseline is not None
-    assert cs.baseline["mean_pitch"] == 210.0
-
-
-def _baseline_features(mean_pitch, mean_volume, speech_rate_variation):
+def _baseline_features(mean_pitch=200.0, mean_volume=0.5, speech_rate_variation=0.1):
     return {
         "pitch": {"mean_pitch": mean_pitch, "std_pitch": 5.0, "pitch_instability": 1.2},
         "volume": {"mean_volume": mean_volume, "std_volume": 0.05},
@@ -193,9 +170,25 @@ def _baseline_features(mean_pitch, mean_volume, speech_rate_variation):
     }
 
 
+def test_baseline_not_set_on_first_chunk():
+    cs = CallState()
+    cs.maybe_set_baseline(_baseline_features())
+    assert cs.baseline is None
+
+
+def test_baseline_set_on_second_chunk():
+    cs = CallState()
+    cs.maybe_set_baseline(_baseline_features(mean_pitch=100.0))  # 1st chunk: no prior chunks yet
+    assert cs.baseline is None
+    cs.record_chunk_signals("t1", None, _baseline_features(mean_pitch=100.0), {})
+    cs.maybe_set_baseline(_baseline_features(mean_pitch=210.0, mean_volume=0.6, speech_rate_variation=0.12))
+    assert cs.baseline is not None
+    assert cs.baseline["mean_pitch"] == 210.0
+
+
 def test_baseline_only_set_once():
     cs = CallState()
-    cs._started_at -= CallState.BASELINE_WINDOW_S + 1
+    cs.record_chunk_signals("t1", None, _baseline_features(), {})
     cs.maybe_set_baseline(_baseline_features(100.0, 0.1, 0.0))
     cs.maybe_set_baseline(_baseline_features(999.0, 0.9, 0.9))
     assert cs.baseline["mean_pitch"] == 100.0  # second call should not overwrite
