@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"rtk ls -la references/ 2>/dev/null && echo \\\"=== HEADS ===\\\" && for f in references/*.md; do echo \\\"--- $f ---\\\"; rtk read \\\"$f\\\" --max-lines 12; echo \\\"\\\"; done 2>/dev/null | head -120\",\"...",
+  "error": "Exit code 1",
+  "timestamp": "2026-08-11T11:09:36.710Z",
+  "retry_count": 2
+}
