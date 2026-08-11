@@ -1,0 +1,1412 @@
+{
+  "scope_note": "本分析測的是規則表的『行為』，不是判定準確率。十模式無任何公開資料集提供 ground truth（專利自訂分類法），故準確率不可計算，亦不宣稱。",
+  "n_records": 23,
+  "default_threshold": 60,
+  "B1_trigger_counts": {
+    "p1": 5
+  },
+  "B1_never_triggered": [
+    "global",
+    "p2",
+    "p3",
+    "p4",
+    "p5",
+    "p6",
+    "p7",
+    "p8",
+    "p9"
+  ],
+  "B2_discrimination": {
+    "scam_mean_patterns": 0.385,
+    "benign_mean_patterns": 0.0,
+    "scam_any_rate": 0.385,
+    "benign_any_rate": 0.0,
+    "n_scam": 13,
+    "n_benign": 10
+  },
+  "B3_threshold_sweep": {
+    "40": {
+      "scam_any_rate": 0.615,
+      "benign_any_rate": 0.0
+    },
+    "50": {
+      "scam_any_rate": 0.538,
+      "benign_any_rate": 0.0
+    },
+    "60": {
+      "scam_any_rate": 0.385,
+      "benign_any_rate": 0.0
+    },
+    "70": {
+      "scam_any_rate": 0.231,
+      "benign_any_rate": 0.0
+    },
+    "80": {
+      "scam_any_rate": 0.0,
+      "benign_any_rate": 0.0
+    }
+  },
+  "B4_feature_present_counts": {
+    "improper_pronoun_use": 8,
+    "language_change": 7,
+    "incoherent_message": 7,
+    "unnecessary_connection": 7,
+    "lack_of_commitment": 7,
+    "non_sequential_message": 3,
+    "subjective_objective_time_mismatch": 1
+  },
+  "B4_emotion_over_threshold_counts": {
+    "focus": 11,
+    "stressful": 8,
+    "neutral": 8,
+    "fear": 1,
+    "extreme": 1,
+    "happy": 1
+  },
+  "records": [
+    {
+      "category": "scam",
+      "clip": "bank_otp_request.wav",
+      "emotions": {
+        "anger": 3,
+        "disgust": 0,
+        "fear": 20,
+        "sadness": 0,
+        "surprise": 25,
+        "happy": 0,
+        "neutral": 20,
+        "stressful": 65,
+        "extreme": 30,
+        "focus": 70,
+        "contradiction": 15,
+        "embarrassing": 0,
+        "vigilance": 45
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": true,
+          "quote": "我們需要立即幫您做保護，避免持續被扣款"
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": true,
+          "quote": "我们需要立即帮您做宣存保护 ... 我們馬上幫您處理圈存"
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": [
+        "p1"
+      ]
+    },
+    {
+      "category": "scam",
+      "clip": "courier_customs_package_scam.wav",
+      "emotions": {
+        "anger": 5,
+        "disgust": 3,
+        "fear": 30,
+        "sadness": 2,
+        "surprise": 15,
+        "happy": 0,
+        "neutral": 30,
+        "stressful": 60,
+        "extreme": 20,
+        "focus": 70,
+        "contradiction": 25,
+        "embarrassing": 3,
+        "vigilance": 45
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": true,
+          "quote": "我現在幫您轉接海關機司科的專員"
+        },
+        "incoherent_message": {
+          "present": true,
+          "quote": "我们查到有一件既往宁明下的包裹,在海关被查货里面加带为境庭"
+        },
+        "non_sequential_message": {
+          "present": true,
+          "quote": "這件事情牽涉到跨境走私案件,建議您先不要驚動身邊的人,我現在幫您轉接海關機司科的專員"
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": true,
+          "quote": "如果您名下有任何存款帳戶,等一下配合作。資金清查會比較快解案"
+        },
+        "lack_of_commitment": {
+          "present": true,
+          "quote": "建議您先不要驚動身邊的人"
+        }
+      },
+      "matched": [
+        "p1"
+      ]
+    },
+    {
+      "category": "scam",
+      "clip": "crypto_investment_scam.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 5,
+        "sadness": 0,
+        "surprise": 10,
+        "happy": 55,
+        "neutral": 20,
+        "stressful": 45,
+        "extreme": 40,
+        "focus": 70,
+        "contradiction": 15,
+        "embarrassing": 0,
+        "vigilance": 10
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": true,
+          "quote": "我們這個虛擬貨幣量化交易平台這個月報酬率又創新高了"
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": true,
+          "quote": "不過因為現在名額有限今天晚上12點前入金的人才能享有加碼獎勵"
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "scam",
+      "clip": "fake_credit_card_suspension.wav",
+      "emotions": {
+        "anger": 3,
+        "disgust": 2,
+        "fear": 25,
+        "sadness": 2,
+        "surprise": 20,
+        "happy": 2,
+        "neutral": 30,
+        "stressful": 55,
+        "extreme": 15,
+        "focus": 70,
+        "contradiction": 45,
+        "embarrassing": 5,
+        "vigilance": 40
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": true,
+          "quote": "我們已經先幫您把卡片。"
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": true,
+          "quote": "這邊是銀行封控中心 / 不過要解除鎖定的話"
+        },
+        "incoherent_message": {
+          "present": true,
+          "quote": "我們已經先幫您把卡片。避免继续被刀刷"
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "scam",
+      "clip": "fake_debt_collection_threat.wav",
+      "emotions": {
+        "anger": 15,
+        "disgust": 5,
+        "fear": 30,
+        "sadness": 0,
+        "surprise": 5,
+        "happy": 0,
+        "neutral": 10,
+        "stressful": 78,
+        "extreme": 45,
+        "focus": 70,
+        "contradiction": 25,
+        "embarrassing": 10,
+        "vigilance": 40
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": true,
+          "quote": "為我們是法務徹縮部門"
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": true,
+          "quote": "已經與其三個月本金加為月金總共八萬六千元／我可以先給你一個解滅利息的和解账户"
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": [
+        "p1"
+      ]
+    },
+    {
+      "category": "scam",
+      "clip": "fake_health_insurance_notice.wav",
+      "emotions": {
+        "anger": 3,
+        "disgust": 2,
+        "fear": 30,
+        "sadness": 3,
+        "surprise": 25,
+        "happy": 2,
+        "neutral": 40,
+        "stressful": 45,
+        "extreme": 15,
+        "focus": 65,
+        "contradiction": 20,
+        "embarrassing": 5,
+        "vigilance": 40
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": true,
+          "quote": "我们这边查到您的建保卡,最近在外线室有一笔一尝的就一记录"
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": true,
+          "quote": "系统显示可能是卡片资料外鞋被冒用了"
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "scam",
+      "clip": "fake_job_recruitment_scam.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 3,
+        "sadness": 0,
+        "surprise": 5,
+        "happy": 45,
+        "neutral": 30,
+        "stressful": 10,
+        "extreme": 12,
+        "focus": 55,
+        "contradiction": 30,
+        "embarrassing": 8,
+        "vigilance": 5
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": true,
+          "quote": "公司這邊有規定要先找一筆象徵性的保證金"
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": true,
+          "quote": "不過因為要先幫你申請賬號跟計算教材公司這邊有規定要先找一筆象徵性的保證金"
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": true,
+          "quote": "之後薪水不下來的時候會一起退還給你"
+        },
+        "lack_of_commitment": {
+          "present": true,
+          "quote": "一個月抓兩三萬跑不掉…保證金大概兩千塊"
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "scam",
+      "clip": "fake_kidnapping_emergency.wav",
+      "emotions": {
+        "anger": 10,
+        "disgust": 5,
+        "fear": 70,
+        "sadness": 30,
+        "surprise": 25,
+        "happy": 0,
+        "neutral": 5,
+        "stressful": 85,
+        "extreme": 60,
+        "focus": 55,
+        "contradiction": 30,
+        "embarrassing": 20,
+        "vigilance": 40
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": true,
+          "quote": "我手機摔壞了這是跟朋友借的電話,你先不要打給爸"
+        },
+        "non_sequential_message": {
+          "present": true,
+          "quote": "警察說我要先付一筆和解金,不然對方家屬要提告,我手機摔壞了這是跟朋友借的電話"
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": true,
+          "quote": "他等一下會用簡訊傳帳號給你"
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "scam",
+      "clip": "fake_prosecutor_investigation.wav",
+      "emotions": {
+        "anger": 5,
+        "disgust": 3,
+        "fear": 35,
+        "sadness": 2,
+        "surprise": 10,
+        "happy": 0,
+        "neutral": 20,
+        "stressful": 72,
+        "extreme": 30,
+        "focus": 78,
+        "contradiction": 45,
+        "embarrassing": 0,
+        "vigilance": 40
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": true,
+          "quote": "配合檢查官爭辦……轉到一個檢查書指定的安全賬戶"
+        },
+        "incoherent_message": {
+          "present": true,
+          "quote": "為了證明你的清白、配合檢查官爭辦你現在不能把這通電話的內容告訴任何人包含家人因為這是真查不公開案件泄露出去你會觸犯刑罰"
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": true,
+          "quote": "等一下會有一位王鼓掌跟你聯繫他會請你把名下的存款轉到一個檢查書指定的安全賬戶"
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": [
+        "p1"
+      ]
+    },
+    {
+      "category": "scam",
+      "clip": "online_shopping_refund_scam.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 5,
+        "sadness": 0,
+        "surprise": 5,
+        "happy": 8,
+        "neutral": 60,
+        "stressful": 20,
+        "extreme": 5,
+        "focus": 70,
+        "contradiction": 25,
+        "embarrassing": 10,
+        "vigilance": 15
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": true,
+          "quote": "等一下我會傳一個連結給您…確認之後款項大概十分鐘內就會退到你的帳戶"
+        },
+        "lack_of_commitment": {
+          "present": true,
+          "quote": "確認之後款項大概十分鐘內就會退到你的帳戶"
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "scam",
+      "clip": "romance_scam_gift_request.wav",
+      "emotions": {
+        "anger": 2,
+        "disgust": 3,
+        "fear": 30,
+        "sadness": 45,
+        "surprise": 10,
+        "happy": 15,
+        "neutral": 10,
+        "stressful": 70,
+        "extreme": 25,
+        "focus": 55,
+        "contradiction": 40,
+        "embarrassing": 35,
+        "vigilance": 30
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": true,
+          "quote": "我知道我們認識的時間不長,但我真的覺得你是我這輩子,遇過最懂我的人"
+        },
+        "language_change": {
+          "present": true,
+          "quote": "使館那邊說要先攪一筆保證金…你可以先帮我电一下吗"
+        },
+        "incoherent_message": {
+          "present": true,
+          "quote": "我真的不想麻煩你,可是……是我在这里没有其他认识的人可以求助"
+        },
+        "non_sequential_message": {
+          "present": true,
+          "quote": "我現在人在海外出差,結果護照跟信用卡在機場被偷了"
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": true,
+          "quote": "結果護照跟信用卡在機場被偷了"
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "scam",
+      "clip": "tech_support_virus_scam.wav",
+      "emotions": {
+        "anger": 3,
+        "disgust": 2,
+        "fear": 45,
+        "sadness": 2,
+        "surprise": 20,
+        "happy": 0,
+        "neutral": 20,
+        "stressful": 72,
+        "extreme": 40,
+        "focus": 78,
+        "contradiction": 15,
+        "embarrassing": 0,
+        "vigilance": 30
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": true,
+          "quote": "我們的系統監測到您的電腦IP位置…讓工程師直接幫您做系統掃描"
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": true,
+          "quote": "整個過程大概二十分鐘"
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "scam",
+      "clip": "utility_bill_overdue_scam.wav",
+      "emotions": {
+        "anger": 5,
+        "disgust": 0,
+        "fear": 15,
+        "sadness": 0,
+        "surprise": 5,
+        "happy": 0,
+        "neutral": 30,
+        "stressful": 70,
+        "extreme": 25,
+        "focus": 70,
+        "contradiction": 40,
+        "embarrassing": 0,
+        "vigilance": 20
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": true,
+          "quote": "我們可以協助您用簡訊連結線上補繳"
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": true,
+          "quote": "系統顯示上有欠款…系統核對成功之後帳單就會立刻恢復正常"
+        },
+        "incoherent_message": {
+          "present": true,
+          "quote": "上個月的電費賬單有一場系統顯示上有欠款"
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": [
+        "p1"
+      ]
+    },
+    {
+      "category": "benign",
+      "clip": "calm_weekend_catchup.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "sadness": 3,
+        "surprise": 0,
+        "happy": 62,
+        "neutral": 45,
+        "stressful": 0,
+        "extreme": 0,
+        "focus": 20,
+        "contradiction": 0,
+        "embarrassing": 0,
+        "vigilance": 0
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "benign",
+      "clip": "dinner_chat.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "sadness": 15,
+        "surprise": 0,
+        "happy": 45,
+        "neutral": 70,
+        "stressful": 10,
+        "extreme": 0,
+        "focus": 20,
+        "contradiction": 0,
+        "embarrassing": 5,
+        "vigilance": 0
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "benign",
+      "clip": "genuine_family_emergency_not_fraud.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 20,
+        "sadness": 15,
+        "surprise": 10,
+        "happy": 0,
+        "neutral": 45,
+        "stressful": 45,
+        "extreme": 10,
+        "focus": 60,
+        "contradiction": 5,
+        "embarrassing": 0,
+        "vigilance": 15
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "benign",
+      "clip": "hesitant_pauses_deciding.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "sadness": 8,
+        "surprise": 0,
+        "happy": 12,
+        "neutral": 70,
+        "stressful": 15,
+        "extreme": 0,
+        "focus": 20,
+        "contradiction": 5,
+        "embarrassing": 55,
+        "vigilance": 0
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": true,
+          "quote": "那個我在想禮拜五的聚餐恩,我可能沒辦法去了"
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "benign",
+      "clip": "legit_bank_balance_inquiry.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 2,
+        "sadness": 0,
+        "surprise": 0,
+        "happy": 8,
+        "neutral": 88,
+        "stressful": 3,
+        "extreme": 0,
+        "focus": 45,
+        "contradiction": 0,
+        "embarrassing": 0,
+        "vigilance": 20
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "benign",
+      "clip": "legit_courier_delivery_confirm.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "sadness": 0,
+        "surprise": 0,
+        "happy": 8,
+        "neutral": 88,
+        "stressful": 3,
+        "extreme": 0,
+        "focus": 45,
+        "contradiction": 0,
+        "embarrassing": 0,
+        "vigilance": 2
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "benign",
+      "clip": "mild_annoyance_unrelated_to_fraud.wav",
+      "emotions": {
+        "anger": 45,
+        "disgust": 15,
+        "fear": 0,
+        "sadness": 12,
+        "surprise": 0,
+        "happy": 5,
+        "neutral": 40,
+        "stressful": 40,
+        "extreme": 20,
+        "focus": 25,
+        "contradiction": 0,
+        "embarrassing": 0,
+        "vigilance": 5
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "benign",
+      "clip": "ordinary_customer_service_order_status.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "sadness": 0,
+        "surprise": 0,
+        "happy": 15,
+        "neutral": 88,
+        "stressful": 3,
+        "extreme": 0,
+        "focus": 40,
+        "contradiction": 0,
+        "embarrassing": 0,
+        "vigilance": 2
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "benign",
+      "clip": "slow_elderly_relative_call.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "sadness": 8,
+        "surprise": 0,
+        "happy": 40,
+        "neutral": 80,
+        "stressful": 5,
+        "extreme": 0,
+        "focus": 25,
+        "contradiction": 0,
+        "embarrassing": 5,
+        "vigilance": 0
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": false,
+          "quote": null
+        }
+      },
+      "matched": []
+    },
+    {
+      "category": "benign",
+      "clip": "workplace_meeting_scheduling.wav",
+      "emotions": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "sadness": 0,
+        "surprise": 0,
+        "happy": 5,
+        "neutral": 82,
+        "stressful": 5,
+        "extreme": 0,
+        "focus": 55,
+        "contradiction": 0,
+        "embarrassing": 3,
+        "vigilance": 0
+      },
+      "features": {
+        "improper_pronoun_use": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_denial": {
+          "present": false,
+          "quote": null
+        },
+        "subjective_objective_time_mismatch": {
+          "present": false,
+          "quote": null
+        },
+        "language_change": {
+          "present": false,
+          "quote": null
+        },
+        "incoherent_message": {
+          "present": false,
+          "quote": null
+        },
+        "non_sequential_message": {
+          "present": false,
+          "quote": null
+        },
+        "spontaneous_correction": {
+          "present": false,
+          "quote": null
+        },
+        "unnecessary_connection": {
+          "present": false,
+          "quote": null
+        },
+        "lack_of_commitment": {
+          "present": true,
+          "quote": "應該一個小時就可以結束"
+        }
+      },
+      "matched": []
+    }
+  ]
+}

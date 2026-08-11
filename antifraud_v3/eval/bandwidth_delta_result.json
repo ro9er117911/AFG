@@ -1,0 +1,480 @@
+{
+  "scope_note": "配對設計：同內容不同通道。語料為 edge-tts 合成語音經 G.711 編碼，非真人真實 PSTN 錄音——量到的是通道劣化的效果，不是真實電話環境的全部效果。",
+  "n_pairs": 23,
+  "wideband_metrics": {
+    "n_total": 23,
+    "n_scored": 23,
+    "n_errors": 0,
+    "n_fraud": 13,
+    "n_benign": 10,
+    "confusion": {
+      "tp": 13,
+      "fp": 0,
+      "fn": 0,
+      "tn": 10
+    },
+    "FAR_missed_fraud": 0.0,
+    "FRR_false_alarm": 0.0,
+    "HTER": 0.0,
+    "FAR_ci95": [
+      0.0,
+      0.2281
+    ],
+    "FRR_ci95": [
+      0.0,
+      0.2775
+    ],
+    "f1_fraud_class": 1.0,
+    "f1_macro": 1.0,
+    "f1_weighted": 1.0,
+    "comparability_note": "論文未載明其 F1 為 macro/micro/weighted，故上述任一數字與論文的 58.51 / 84.78 皆為『非嚴格可比』。主要指標請看 HTER 與 FRR/FAR。"
+  },
+  "narrowband_metrics": {
+    "n_total": 23,
+    "n_scored": 23,
+    "n_errors": 0,
+    "n_fraud": 13,
+    "n_benign": 10,
+    "confusion": {
+      "tp": 13,
+      "fp": 0,
+      "fn": 0,
+      "tn": 10
+    },
+    "FAR_missed_fraud": 0.0,
+    "FRR_false_alarm": 0.0,
+    "HTER": 0.0,
+    "FAR_ci95": [
+      0.0,
+      0.2281
+    ],
+    "FRR_ci95": [
+      0.0,
+      0.2775
+    ],
+    "f1_fraud_class": 1.0,
+    "f1_macro": 1.0,
+    "f1_weighted": 1.0,
+    "comparability_note": "論文未載明其 F1 為 macro/micro/weighted，故上述任一數字與論文的 58.51 / 84.78 皆為『非嚴格可比』。主要指標請看 HTER 與 FRR/FAR。"
+  },
+  "hter_delta_pp": 0.0,
+  "protocol_threshold_pp": 15,
+  "verdict_flips": [],
+  "mean_asr_similarity": 0.932,
+  "pairs": [
+    {
+      "clip": "benign/calm_weekend_catchup.wav",
+      "label_is_scam": false,
+      "wideband": {
+        "transcript": "最近好嗎?好久沒聊天了\n我這個禮拜比較弦,想說可以約出來走走。\n上次你說想去的那個展覽,我查了一下到月底都還在,平日人比較少,要不要禮拜三下午一起去,逛完可以順便吃個下午茶,我記得附近有一間你之前提過想試試看的咖啡廳。",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "narrowband": {
+        "transcript": "最近好嗎?好久沒聊天了\n我這個禮拜比較鹹,想說可以約出來走走\n上次你說想去的那個展覽,我查了以下到月底都還在,平日人比較少,要不要禮拜三下午一起去,逛完可以順便吃個下午茶,我記得附近有一間你之前提過想試試看的咖啡廳。",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "asr_similarity": 0.977,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "benign/dinner_chat.wav",
+      "label_is_scam": false,
+      "wideband": {
+        "transcript": "我們晚上要不要一起吃飯\n我看了家新K的餐廳評價還不錯要不要試試看\n如果你有空的話我們6.5在急運站見面好嗎?\n我今天工作有點累,想早點休息,晚一點再傳訊息給你",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "narrowband": {
+        "transcript": "我們晚上要不要一起吃飯\n我看大家新開的餐廳評價還不錯要不要試試看\n如果你有空的話我們6.5在捷運站見面好嗎?\n我今天工作有點累,想早點休息,晚一點再傳訊息給你",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "asr_similarity": 0.962,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "benign/genuine_family_emergency_not_fraud.wav",
+      "label_is_scam": false,
+      "wideband": {
+        "transcript": "為阿嬤剛剛在家裡跌倒了,我們已經叫救護車了,現在正要送到醫院,你可以先聯絡一下救救,跟他說我們會在急診室等,醫生說先做檢查看。\n看看有沒有骨折,目前意識還算清楚,你不用太緊張,但是可以的話景量早點過來,我在這邊陪著他。",
+        "is_fraud": false,
+        "confidence": 0.82,
+        "fraud_type": null
+      },
+      "narrowband": {
+        "transcript": "為阿嬤剛剛在家裡跌倒了我們已經叫救護車了現在正要送到醫院你可以先聯絡一下救救跟他說我們會在急診室等醫生說先做檢查看\n看看有沒有骨折,目前意識還算清楚,你不用太緊張,但是可以的話景量早點過來,我在這邊陪著他。",
+        "is_fraud": false,
+        "confidence": 0.86,
+        "fraud_type": null
+      },
+      "asr_similarity": 0.972,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "benign/hesitant_pauses_deciding.wav",
+      "label_is_scam": false,
+      "wideband": {
+        "transcript": "那個我在想禮拜五的聚餐恩,我可能沒辦法去了因為那天剛好我媽要來我要陪她去看醫生真的很不好意思你們玩得開心一點下次,下次我在找時間不請大家吃飯\n如果零食有變動的話,我在跟你說一聲",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "narrowband": {
+        "transcript": "那個我在想禮拜五的聚餐恩,我可能沒辦法去了因為那天剛好我媽要來我要陪她去看醫生真的很不好意思你們玩得開心一點下次我在找時間不請大家吃飯\n如果零食有變動的話,我在跟你說一聲",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "asr_similarity": 0.983,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "benign/legit_bank_balance_inquiry.wav",
+      "label_is_scam": false,
+      "wideband": {
+        "transcript": "您好,這裡是銀行客服中心,想跟您確認一下,您日前玲貴申請的定存到期通知已經處理完成,款項會依照您原本設定的方式自動轉入指定帳戶。\n如果您对利率或者其他理财商品有兴趣,欢迎亲自到分行或者上网营查询,我们不会透过电话要求您提供密码或者验证码,如果有任何疑问也可以直接打银行官方客服专线确认。\n謝謝您",
+        "is_fraud": false,
+        "confidence": 0.9,
+        "fraud_type": null
+      },
+      "narrowband": {
+        "transcript": "您好,這裡是銀行客服中心想跟您確認一下您日前領貴申請的定存到期通知已經處理完成款項會依照您原本設定的方式自動轉入指定賬戶\n如果您對利率或者其他理財商品有興趣,歡迎親自到分行或者上網贏查詢,我們不會透過電話要求您提供密碼或者驗證嘛,如果有任何疑問也可以直接打銀行官方客服專線確認。\n謝謝您",
+        "is_fraud": false,
+        "confidence": 0.9,
+        "fraud_type": null
+      },
+      "asr_similarity": 0.814,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "benign/legit_courier_delivery_confirm.wav",
+      "label_is_scam": false,
+      "wideband": {
+        "transcript": "您好,我是快地園,現在在您登記的地址附近,想跟您確認一下方便收件的時間,如果現在不方便,我可以先寄放在管理室,或者晚一點再送過來都可以,麻煩您方便的話回覆我。\n謝謝",
+        "is_fraud": false,
+        "confidence": 0.88,
+        "fraud_type": null
+      },
+      "narrowband": {
+        "transcript": "您好,我是快地員現在在您登記的地址附近想跟您確認以下方便收件的時間如果現在不方便我可以先即放在管理室或者晚一點再送過來都可以麻煩您方便的話回覆我\n謝謝",
+        "is_fraud": false,
+        "confidence": 0.9,
+        "fraud_type": null
+      },
+      "asr_similarity": 0.917,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "benign/mild_annoyance_unrelated_to_fraud.wav",
+      "label_is_scam": false,
+      "wideband": {
+        "transcript": "我今天真的很煩,停車場那個管理員又跟我說車位被占用,我明明有角月租,結果每次回去都要找半天車位,已經跟他反映好幾次了都...\n没有改善\n算了,我等一下在打電話去管委會抗議一次,你今天過得怎麼樣?有沒有比較順利一點?",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "narrowband": {
+        "transcript": "我今天真的很煩,停車廠那個管理員又跟我說車位被占用,我明明有角月租,結果每次回去都要找半天車位,已經跟他反應好幾次了都...\n沒有改善\n算了,我等一下在打電話去管委會抗議一次你今天過的怎麼樣,有沒有比較順利一點",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "asr_similarity": 0.943,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "benign/ordinary_customer_service_order_status.wav",
+      "label_is_scam": false,
+      "wideband": {
+        "transcript": "您好,這裡是克服中心,想跟您確認一下您上禮拜訂購的商品目前配送狀況。\n系統顯示已經出貨,預計這兩天會送答如果送答時間跟您預期的不一樣或者商品有任何問題都可以隨時打這支電話跟我們聯繫謝謝您的耐心等候,祝您有美好的一天",
+        "is_fraud": false,
+        "confidence": 0.88,
+        "fraud_type": null
+      },
+      "narrowband": {
+        "transcript": "您好,這裡是客服中心想跟您去任一下您上禮拜訂購的商品目前配送狀況\n系統顯示已經出貨,預計這兩天那會送答如果送答時間跟你預期的不一樣,或者商品有任何問題都可以隨時打這支電話跟我們聯繫謝謝您的耐心等候,祝您有美好的一天",
+        "is_fraud": false,
+        "confidence": 0.87,
+        "fraud_type": null
+      },
+      "asr_similarity": 0.944,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "benign/slow_elderly_relative_call.wav",
+      "label_is_scam": false,
+      "wideband": {
+        "transcript": "喂呀,是你哦,我這幾天啊,膝蓋比較不舒服,走路要慢慢走你阿姨昨天有來看我,帶了一些水果,我跟他說不用這麼客氣,對了,禮拜天你會回來吃飯嗎?我先問問看要主幾人份,不用急著回答我你先跟你太太商量一下\n方便的话再跟我说就好",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "narrowband": {
+        "transcript": "喂啊,是你哦,我這幾天啊膝蓋比較不舒服,走路要慢慢走你阿姨昨天有來看我,帶了一些水果我跟他說不用這麼客氣,對了,禮拜天你會回來吃飯嗎?我先問問看要主幾人份,不用急著回答我你先跟你太太商量一下\n方便的话再跟我说就好",
+        "is_fraud": false,
+        "confidence": 0.93,
+        "fraud_type": null
+      },
+      "asr_similarity": 0.981,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "benign/workplace_meeting_scheduling.wav",
+      "label_is_scam": false,
+      "wideband": {
+        "transcript": "想跟你確認一下這裡壞似的專案會議時間原本排早上10點但是行銷不那邊說他們零食有事想改到下午2點不知道你那邊方便嗎\n如果可以的話,我在統一發會議通知一程大概就是討論一下上一季的成果報告還有下一季的預算規劃,應該一個小時就可以結束",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "narrowband": {
+        "transcript": "想跟你去任一下這裡敗司的專案會議時間原本排早上10點但是行銷不那邊說他們零食有事想改到下午2點不知道你那邊方便嗎\n如果可以的話,我在統一發會議通知一程大概就是討論一下上一季的成果報告還有下一季的預算規劃,應該一個小時就可以結束",
+        "is_fraud": false,
+        "confidence": 0.95,
+        "fraud_type": null
+      },
+      "asr_similarity": 0.965,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/bank_otp_request.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "您好,這裡是臺灣銀行風控中心偵測到您的帳戶有一筆一場扣款\n是一笔国外网购的扣款,金额不小,我们需要立即帮您做宣存保护,避免持续被扣款。\n為了驗證身份,請您把手機收到的簡訊驗證馬念給我,我們馬上幫您處理圈存。",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "banking_fraud"
+      },
+      "narrowband": {
+        "transcript": "您好,這裡是臺灣銀行風控中心偵測到您的帳戶有一筆一場扣款\n是一笔国外网购的扣款,金额不小,我们需要立即帮您做圈层保护,避免持续被扣款。\n為了驗證身份,請您把手機收到的簡訊驗證馬念給我,我們馬上幫您處理圈存。",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "banking_fraud"
+      },
+      "asr_similarity": 0.981,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/courier_customs_package_scam.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "您好,这里是国际快递公司客服,我们查到有一件既往宁明下的包裹,在海关被查货里面加带为境庭,目前已经被列为调查对象。\n這件事情牽涉到跨境走私案件,建議您先不要驚動身邊的人,我現在幫您轉接海關機司科的專員,他會跟你說明後續怎麼處理,如果您名下有任何存款帳戶,等一下配合作。\n資金清查會比較快解案",
+        "is_fraud": true,
+        "confidence": 0.97,
+        "fraud_type": "identity_theft"
+      },
+      "narrowband": {
+        "transcript": "您好,這裡是國際快遞公司客服我們查到有一件既往您名下的包裹在海關被查獲理念加代為徑庭目前已經被列為調查對象\n這件事情牽涉到跨鏡走資案件建議您先不要驚動身邊的人我現在幫您轉接海關機司科的專員他會跟您說明後續怎麼處理如果您名下有任何存款帳戶等一下配合\n資金清查會比較快解案",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "identity_theft"
+      },
+      "asr_similarity": 0.803,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/crypto_investment_scam.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "陳小姐嗎我是上次藍群阻力跟你介紹投資機會的老師助理\n我們這個虛擬貨幣量化交易平台這個月報酬率又創新高了上一批更單的會員平均一週賺了30%老實說現在加入還來的極大上這部行情\n你只要先把資金會到我們平臺指定的錢包地址系統就會自動開始幫你操作獲利可以隨時提令不過因為現在名額有限今天晚上12點前入境的人才能享有加碼獎勵要不要我現在就把會款賬戶傳給你",
+        "is_fraud": true,
+        "confidence": 0.97,
+        "fraud_type": "investment_fraud"
+      },
+      "narrowband": {
+        "transcript": "陳小姐嗎我是上次藍群阻力跟你介紹投資機會的老師助理\n我們這個虛擬貨幣量化交易平台這個月報酬率又創新高了上一批更單的會員平均一週賺了30%老實說現在加入還來的極大上這波行情\n你只要先把資金會到我們平臺指定的錢包地址系統就會自動開始幫你操作獲利可以隨時提令不過因為現在名額有限今天晚上12點前入境的人才能享有加碼獎勵要不要我現在就把會款賬戶傳給你",
+        "is_fraud": true,
+        "confidence": 0.97,
+        "fraud_type": "investment_fraud"
+      },
+      "asr_similarity": 0.994,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/fake_credit_card_suspension.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "先生您好,這邊是銀行封控中心,剛剛系統偵測到您的信用卡在國外有一筆刷卡記錄,金額不小,因為時間點比較敏感。我們已經先幫您把卡片。\n避免继续被刀刷\n不過要解除鎖定的話,需要跟您確認幾個資料,包括卡片被滅墨三碼還有簡訊驗證碼。麻煩您方便的話現在跟我合對一下,不然這張卡會一直沒。\n办法用",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "banking_fraud"
+      },
+      "narrowband": {
+        "transcript": "先生您好,這邊是銀行風控中心,剛剛系統偵測到您的信用卡在國外有一筆刷卡記錄,新額不小,因為時間點比較敏感,我們已經先幫您把卡片\n所住了,避免继续被倒刷\n不過要解除鎖定的話,需要跟您確認幾個資料,包括卡片被滅墨三碼還有簡訊驗證碼。麻煩您方便的話,現在跟我合對一下。不然這張卡會一直沒...\n办法用",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "banking_fraud"
+      },
+      "asr_similarity": 0.931,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/fake_debt_collection_threat.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "為我們是法務徹縮部門你明下有一筆網路戒帶的欠款已經與其三個月本金加為月金總共八萬六千元\n如果今天之內沒有處理我們就會把你的資料送到你戶籍地的法院申請強制執行同時會通知你的工作單位辦理心自扣壓這件事情你最好不要讓家人知道以免影響你的家庭關係你現在方便的話我可以先給你一個解滅利息的\n和解账户 今天先會三萬塊過去 剩下的分歧就好",
+        "is_fraud": true,
+        "confidence": 0.93,
+        "fraud_type": "extortion_fraud"
+      },
+      "narrowband": {
+        "transcript": "我們是法務廁書部門你明下有一筆網路戒帶的欠款已經與其三個月本金加維約金總共八萬六千元\n如果今天之內沒有處理我們就會把你的資料送到你戶籍地的法院申請強制執行同時會通知你的工作單位辦理心思扣壓這件事情你最好不要讓家人知道以免影響你的家庭關係你現在方便的話我可以先給你一個減免利息的\n和解账户,今天先會三萬塊過去,剩下的分歧就好",
+        "is_fraud": true,
+        "confidence": 0.95,
+        "fraud_type": "extortion_fraud"
+      },
+      "asr_similarity": 0.941,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/fake_health_insurance_notice.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "您好,這裡是建保術綜合服務中心,請問是王小傑本人嗎?\n我们这边查到您的建保卡,最近在外线室有一笔一尝的就一记录,金额还蛮大的,系统显示可能是卡片资料外鞋被冒用了。\n為了保障您的權益,我需要跟您核對一下身分證字號,還有建保卡卡號,確認是不是本人使用,如果不是的話我們會立刻幫您做停用跟保護的動作。",
+        "is_fraud": true,
+        "confidence": 0.95,
+        "fraud_type": "identity_theft"
+      },
+      "narrowband": {
+        "transcript": "您好,這裡是建保術綜合服務中心,請問是王小姐本人嗎?\n我們就邊查到您的建保卡最近在外縣市有一筆異常的就一記錄金額還蠻大的系統顯示可能是卡片資料外協備貿易用了\n為了保障您的權益,我需要跟您合對以下身分證字號,還有建保卡卡號,確認是不是本人使用,如果不是的話我們會立刻幫您做庭用跟保護的動作",
+        "is_fraud": true,
+        "confidence": 0.94,
+        "fraud_type": "identity_theft"
+      },
+      "asr_similarity": 0.821,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/fake_job_recruitment_scam.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "你好啊,是這樣我們是人力銀行合作的精彩專員啦看到你上禮拜有投旅例這個直徑是在家就可以做的資料處理工作實行還蠻高的一個月抓兩三萬跑不掉\n不過因為要先幫你申請賬號跟計算教材公司這邊有規定要先找一筆象徵性的保證金大概兩千塊之後薪水不下來的時候會一起退還給你這樣你比較安心一點",
+        "is_fraud": true,
+        "confidence": 0.92,
+        "fraud_type": "unclassified"
+      },
+      "narrowband": {
+        "transcript": "你好啊,是这样,我们是人力银行合作的争彩专园啦,看到你上礼拜有头举例,这个直径是在家就可以做的资料处理工作,实行还蛮高的,一个月抓两三万跑不掉。\n不過因為要先幫你申請賬號跟計算教材公司這邊有規定要先找一筆象徵性的保證金大概2000塊之後薪水不下來的時候會一起退還給你這樣你比較安心一點",
+        "is_fraud": true,
+        "confidence": 0.92,
+        "fraud_type": "unclassified"
+      },
+      "asr_similarity": 0.804,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/fake_kidnapping_emergency.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "妈,是我啦,我除车祸撞到人现在在警察局,对方伤得很严重,警察说我要先付一笔和借金,不然对方家属要提告,我手机摔坏了这是跟朋友借的电话,你先不要打给爸,他\n他知道會很生氣,你現在方便的話先會食物挽到我朋友的帳戶,他等一下會用簡訊傳帳號給你,擺脫你先不要跟任何人講,我怕事情鬧大。",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "identity_theft"
+      },
+      "narrowband": {
+        "transcript": "妈,是我啦,我除车祸撞到人现在在警察局,对方伤得很严重,警察说我要先付一笔和借金,不然对方家属要提告,我手机摔坏了这是跟朋友借的电话,你先不要打给爸,他...\n他知道會很生氣你現在方便的話先會食物挽到我朋友的帳戶他等一下會用簡訊傳帳號給你擺脫你先不要跟任何人講我怕事情鬧大",
+        "is_fraud": true,
+        "confidence": 0.95,
+        "fraud_type": "identity_theft"
+      },
+      "asr_similarity": 0.971,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/fake_prosecutor_investigation.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "各位 請問是王先生本人嗎這裡是台北地方檢察署我是書記官陳志明案件編號113年度爭自第589號\n你的身分證字號被拿去開了一個涉及洗錢的人頭賬戶現在你已經是這個案件的關係人\n為了證明你的清白、配合檢查官爭辦你現在不能把這通電話的內容告訴任何人包含家人因為這是真查不公開案件泄露出去你會觸犯刑罰\n等一下會有一位王鼓掌跟你聯繫他會請你把名下的存款轉到一個檢查書指定的安全賬戶做資金保全配合完就會排除你的嫌疑",
+        "is_fraud": true,
+        "confidence": 0.98,
+        "fraud_type": "identity_theft"
+      },
+      "narrowband": {
+        "transcript": "請問是王先生本人嗎?這裡是台北地方檢察署我是書記官陳志明案件編號123年度爭次第589號\n你的身分證字號被拿去開了一個涉及洗錢的人頭賬戶現在你已經是這個案件的關係人\n為了證明你的清白、配合檢查官爭辦你現在不能把這通電話的內容告訴任何人包含家人因為這是真查不公開案件泄露出去你會出犯刑法\n等一下會有一位王鼓掌跟你聯繫他會請你把名下的存款轉到一個檢查書指定的安全賬戶做資金保全配合完就會排除你的嫌疑",
+        "is_fraud": true,
+        "confidence": 0.98,
+        "fraud_type": "identity_theft"
+      },
+      "asr_similarity": 0.97,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/online_shopping_refund_scam.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "您好,這裡是購物平台客服中心,系統顯示您上個月訂購的商品。因為我們倉庫作業書師重複扣款兩次,需要幫您辦理退款。\n為了退款到您原本的付款賬戶,需要請您配合操作一下網路銀行,等一下我會傳一個連結給您。麻煩您登入之後輸入手機收到的驗證碼給我核對身。\n確認之後款向大概十分鐘內就會退到你的帳戶,請問您現在方便操作嗎?",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "customer_service_fraud"
+      },
+      "narrowband": {
+        "transcript": "您好,這裡是購物平台客服中心系統顯示您上個月訂購的商品因為我們倉庫作業書師重複扣款兩次需要幫您辦理退款\n為了退款到您原本的付款賬戶,需要請您配合操作一下網路銀行,等一下我會傳一個連結給您,麻煩您登入之後輸入手機收到的驗證碼給我核對身。\n確認之後款向大概十分鐘內就會退到你的帳戶,請問您現在方便操作嗎?",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "customer_service_fraud"
+      },
+      "asr_similarity": 0.98,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/romance_scam_gift_request.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "親愛的,我知道我們認識的時間不長,但我真的覺得你是我這輩子,遇過最懂我的人。\n我現在人在海外出差,結果護照跟信用卡在機場被偷了。使館那邊說要先攪一筆保證金才能和發零時證件讓我回國。我真的不想麻煩你,可是……\n是我在这里没有其他认识的人可以求助,你可以先帮我电一下吗,等我回国马上就还你,这件事先不要跟你朋友说,我怕别人会误会我们的关系。",
+        "is_fraud": true,
+        "confidence": 0.94,
+        "fraud_type": "identity_theft"
+      },
+      "narrowband": {
+        "transcript": "聽愛的,我知道我們認識的時間不長,但我真的覺得你是我這輩子,遇過最懂我的人。\n我現在人在海外出差,結果護照跟信用卡在機場被偷了。使館那邊說要先攪一筆保證金才能和發零時證件讓我回國。我真的不想麻煩你,可是……\n是我在這裡沒有其他認識的人可以求助你可以先幫我電一下嗎等我回國馬上就還你這件事先不要跟你朋友說我怕別人會誤會我們的關係",
+        "is_fraud": true,
+        "confidence": 0.95,
+        "fraud_type": "unclassified"
+      },
+      "asr_similarity": 0.858,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/tech_support_virus_scam.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "先生您好,這裡是為軟官方技術支援中心。我們的系統監測到您的電腦IP位置,在過去24小時內對外發送了大量惡意城市風包,已經有土。\n多位使用者向我們投訴。\n為了避免您的個人資料跟銀行賬戶被駭客到用現在需要請您立刻打開電腦下載我們提供的遠端連線軟體讓工程師直接幫您做系統掃描跟\n整個過程大概二十分鐘,請您先不要關機,也不要找其他人來看,這是原廠授權的緊急處理程序,脫月九年的資料外洩風險越高。",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "phishing_fraud"
+      },
+      "narrowband": {
+        "transcript": "先生您好,這裡是維軟官方技術支援中心我們的系統監測到您的電腦IP位置在過去24小時內對外發送了大量惡意城市風包已經有多\n作為使用者向我們投訴\n為了避免您的個人資料跟銀行賬戶被駭客到用現在需要請您立刻打開電腦下載我們提供的遠端連線軟體讓工程師直接幫您做系統掃描跟\n整個過程大概二十分鐘,請您先不要關機,也不要找其他人來看。這是原廠授權的緊急處理程序,脫月九年的資料外界風險越高。",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "customer_service_fraud"
+      },
+      "asr_similarity": 0.955,
+      "verdict_flipped": false
+    },
+    {
+      "clip": "scam/utility_bill_overdue_scam.wav",
+      "label_is_scam": true,
+      "wideband": {
+        "transcript": "為你好,這裡是台灣電力公司客服中心通知您上個月的電費賬單有一場系統顯示上有欠款為腳侵如果今天晚上10點前沒有處理明天就會派人到府上執行斷電作業\n為了避免影響您的用電我們可以協助您用簡訊連結線上補教麻煩您點開簡訊你的連結輸入新用卡卡號跟被面目3碼系統核對成功之後障單就會立刻恢復正常",
+        "is_fraud": true,
+        "confidence": 0.96,
+        "fraud_type": "phishing_fraud"
+      },
+      "narrowband": {
+        "transcript": "各位你好,這裡是台灣電力公司客服中心通知您上個月的電費賬單有一場系統顯示上有欠款為腳侵如果今天晚上10點前沒有處理明天就會派人到府上執行斷電作業\n為了避免影響您的用電我們可以協助您用簡訊連結線上補兆麻煩您點開簡訊你的連結輸入新用卡卡號跟被面目3碼系統合對成功之後障單就會立刻恢復正常",
+        "is_fraud": true,
+        "confidence": 0.97,
+        "fraud_type": "phishing_fraud"
+      },
+      "asr_similarity": 0.975,
+      "verdict_flipped": false
+    }
+  ]
+}
