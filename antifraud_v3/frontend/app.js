@@ -622,6 +622,14 @@ function formatAcousticReadout(a) {
 // the other three fields it was already being sent. Showing them as two separate badges is what
 // distinguishes "sounds like a cloned voice" from "content reads like a scam script" instead of
 // one undifferentiated risk chip.
+// The other chips below interpolate only server-controlled enum labels, but the patent chips
+// carry LLM-produced transcript quotes — those go through here rather than into raw HTML.
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, (ch) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
 function badgeRowHTML(msg) {
   const chips = [];
   // Always shown as a plain score, not gated on ai_voice_flag/threshold — a continuous "how
@@ -644,6 +652,14 @@ function badgeRowHTML(msg) {
   if (msg.audio_quality && msg.audio_quality.narrowband) {
     chips.push(`<span class="info-badge narrowband">電話頻寬（窄頻）— 聲學細節可信度較低</span>`);
   }
+  // 專利 TW I904863 S312 的詐騙模式標記。只有在 fuse() 判定成立時後端才會產生內容（見
+  // pipeline/chunk_worker.py 的 gating），所以這裡不需要再判斷風險等級——有值就代表已判定成立。
+  // 可複選，每個模式一個 chip；title 帶出命中的逐字稿引句，滑過去就能看到判斷依據。
+  (msg.matched_patterns || []).forEach((p) => {
+    const quotes = (p.quotes || []).join('｜');
+    const tip = quotes ? `依據：${quotes}` : '無逐字稿引句';
+    chips.push(`<span class="info-badge patent" title="${escapeHTML(tip)}">${escapeHTML(p.name)}</span>`);
+  });
   return chips.join('');
 }
 

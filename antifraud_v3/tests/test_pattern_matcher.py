@@ -6,10 +6,13 @@
 「判定成立後才標記」現在掛在 reasoning/fusion.py 的 fuse() is_fraud 上，不是 LLM 的 risk_level。
 """
 
+import json
+
 import numpy as np
 
 from antifraud_v3.audio.features import extract_acoustic_features
 
+from antifraud_v3.detectors.deepfake_voice import DeepfakeChunkResult
 from antifraud_v3.detectors.scam_semantic import AntiFraudQwenResult, ScamSemanticError
 from antifraud_v3.pipeline import chunk_worker
 from antifraud_v3.pipeline.call_state import CallState
@@ -261,3 +264,37 @@ def test_line2_non_scamsemantic_error_does_not_abort_the_analysis(monkeypatch):
     result, _alert, _evidence = out
     assert result.risk_level == "low"
     assert result.fusion_source == "none"
+
+
+# ---- API 合約：模式標記必須真的送到前端 ----
+
+
+def test_matched_patterns_reach_the_streaming_api(monkeypatch):
+    """回歸測試：S312 的標記算得出來但沒被序列化進 final_analysis 事件，前端就永遠看不到。
+    這正是移植後實際發生過的缺口——後端邏輯正確，但 upload.py/ws.py 的事件沒帶這個欄位。"""
+    from fastapi.testclient import TestClient
+    from antifraud_v3.server.main import app
+
+    monkeypatch.setattr(chunk_worker, "predict_deepfake",
+                        lambda y, sr: DeepfakeChunkResult(fake_score=0.0, label="bonafide"))
+    monkeypatch.setattr(chunk_worker, "classify_call_via_llm",
+                        lambda provider, transcript: AntiFraudQwenResult(
+                            scenario="銀行來電", is_fraud=True, confidence=0.9,
+                            fraud_type_raw="banking_fraud", reasoning_trace=[]))
+    monkeypatch.setattr(chunk_worker, "discriminate", lambda provider, evidence: DiscriminateResult(
+        stage_evidence=[StageEvidence(stage="payment_credential_extraction", strength="strong", justification="要求驗證碼")],
+        overall_note="高風險",
+        text_emotions=emotions(extreme=95),
+        semantic_features=features("improper_pronoun_use", "lack_of_denial", quotes={"lack_of_denial": "我沒有說謊"}),
+    ))
+
+    final = None
+    with TestClient(app).stream("POST", "/api/test-clips/scam/bank_otp_request.wav/analyze") as r:
+        for line in r.iter_lines():
+            if line and '"final_analysis"' in line:
+                final = json.loads(line)
+
+    assert final is not None, "沒有收到 final_analysis 事件"
+    assert "matched_patterns" in final, "final_analysis 必須帶 matched_patterns 欄位"
+    assert [p["pattern_id"] for p in final["matched_patterns"]] == ["p9"]
+    assert final["matched_patterns"][0]["quotes"] == ["我沒有說謊"]
