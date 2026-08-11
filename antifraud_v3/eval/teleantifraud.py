@@ -31,6 +31,8 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from .provenance import stamp
+
 REPO_ID = "JimmyMa99/TeleAntiFraud"
 CACHE_DIR = Path(__file__).parent / "teleantifraud_cache"
 RESULT_PATH = Path(__file__).parent / "teleantifraud_result.json"
@@ -206,6 +208,7 @@ def run(rows: list[dict]) -> dict:
             print(f"  {n}/{len(rows)}  ({el/n:.1f}s/筆，預估剩餘 {(len(rows)-n)*el/n/60:.0f} 分鐘)")
 
     return {
+        "provenance": stamp(),
         "dataset": REPO_ID,
         "split": "official test",
         "backend": "line2_claude_text",

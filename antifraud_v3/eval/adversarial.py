@@ -29,10 +29,12 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from .provenance import stamp
 from ..detectors.scam_semantic_llm import classify_call_via_llm
 from ..llm import LLMProviderError, get_llm_provider
 
 TRANSCRIPTS_PATH = Path(__file__).parent / "adversarial_transcripts.json"
+BENIGN_PATH = Path(__file__).parent / "benign_transcripts.json"
 RESULT_PATH = Path(__file__).parent / "adversarial_result.json"
 
 # 三種強度，對應不同的對抗成本。詐騙集團越願意投入，改寫越徹底。
@@ -57,6 +59,7 @@ class Trial:
     is_fraud: bool
     confidence: float
     fraud_type: str | None
+    label_is_scam: bool = True  # benign 對照組為 False
 
 
 def rewrite(provider, transcript: str, instruction: str) -> str:
@@ -69,41 +72,61 @@ def rewrite(provider, transcript: str, instruction: str) -> str:
     return result.transcript
 
 
-def run(transcripts: dict[str, str], limit: int | None) -> dict:
+def run(scam: dict[str, str], benign: dict[str, str], limit: int | None) -> dict:
+    """scam 與 benign 都跑同樣的改寫流程。
+
+    benign 對照組是必要的，不是加分項：只測 scam 的話，「偵測率下降」有一個
+    無法排除的替代解釋——**改寫可能只是讓分類器整體變保守**。若 benign 同時被
+    大量改判為詐騙，衰減的成因就完全不同。一個把所有東西都判成詐騙的分類器，
+    可以在只測 scam 的設計下輕鬆拿到 100%。
+    """
     provider = get_llm_provider()
-    items = list(transcripts.items())[:limit]
     trials: list[Trial] = []
 
-    for name, original in items:
-        for strength, instruction in STRENGTHS.items():
-            text = original
-            if instruction is not None:
+    for label_is_scam, items in ((True, scam), (False, benign)):
+        tag = "scam" if label_is_scam else "benign"
+        rows = list(items.items())[:limit]
+        print(f"\n[{tag}] {len(rows)} 份")
+        for name, original in rows:
+            for strength, instruction in STRENGTHS.items():
+                text = original
+                if instruction is not None:
+                    try:
+                        text = rewrite(provider, original, instruction)
+                    except LLMProviderError as e:
+                        print(f"  [{name} / {strength}] 改寫失敗，跳過：{e}")
+                        continue
                 try:
-                    text = rewrite(provider, original, instruction)
-                except LLMProviderError as e:
-                    print(f"  [{name} / {strength}] 改寫失敗，跳過：{e}")
+                    r = classify_call_via_llm(provider, text)
+                except Exception as e:
+                    print(f"  [{name} / {strength}] 分類失敗，跳過：{e}")
                     continue
-            try:
-                r = classify_call_via_llm(provider, text)
-            except Exception as e:
-                print(f"  [{name} / {strength}] 分類失敗，跳過：{e}")
-                continue
-            trials.append(Trial(name, strength, r.is_fraud, r.confidence, r.fraud_type_raw))
-            print(f"  {name:42s} {strength:6s} is_fraud={r.is_fraud} conf={r.confidence:.2f}")
-            time.sleep(0.5)  # 對 CLI provider 客氣一點，避免連續打爆
+                trials.append(Trial(name, strength, r.is_fraud, r.confidence,
+                                    r.fraud_type_raw, label_is_scam))
+                print(f"  {name:42s} {strength:6s} is_fraud={r.is_fraud} conf={r.confidence:.2f}")
+                time.sleep(0.5)  # 對 CLI provider 客氣一點，避免連續打爆
 
-    # 逐強度彙總。這些全是詐騙逐字稿，所以 is_fraud=False 就是漏抓。
     by_strength: dict[str, dict] = {}
     for s in STRENGTHS:
-        rows = [t for t in trials if t.strength == s]
-        if not rows:
+        sc = [t for t in trials if t.strength == s and t.label_is_scam]
+        bn = [t for t in trials if t.strength == s and not t.label_is_scam]
+        if not sc:
             continue
-        hits = sum(1 for t in rows if t.is_fraud)
+        hits = sum(1 for t in sc if t.is_fraud)
+        false_alarms = sum(1 for t in bn if t.is_fraud)
         by_strength[s] = {
-            "n": len(rows),
+            "n_scam": len(sc),
             "detected": hits,
-            "detection_rate": round(hits / len(rows), 4),
-            "mean_confidence": round(sum(t.confidence for t in rows) / len(rows), 4),
+            "detection_rate": round(hits / len(sc), 4),
+            "n_benign": len(bn),
+            "false_alarms": false_alarms,
+            # 這一欄是關鍵：若它隨改寫強度上升，代表分類器變寬鬆而非變準；
+            # 若它維持在 0，「改寫讓分類器整體變保守」的替代解釋就被排除。
+            "false_alarm_rate": round(false_alarms / len(bn), 4) if bn else None,
+            "mean_conf_correct": round(
+                sum(t.confidence for t in sc if t.is_fraud) / max(hits, 1), 4),
+            "mean_conf_wrong": round(
+                sum(t.confidence for t in sc if not t.is_fraud) / max(len(sc) - hits, 1), 4),
         }
 
     base = by_strength.get("none", {}).get("detection_rate")
@@ -112,8 +135,13 @@ def run(transcripts: dict[str, str], limit: int | None) -> dict:
             agg["relative_drop"] = round((base - agg["detection_rate"]) / base, 4)
 
     return {
+        "provenance": stamp(),
         "reference": "Li et al. 2025, arXiv:2507.16291 — GPT-4o 改寫致準確率下降 30.96%",
         "protocol_threshold": 0.30,
+        "known_limitation": (
+            "改寫者與分類器共用同一個 provider 單例（同模型），攻防同源使數字方向與"
+            "量級皆未知。此為已揭露的方法論限制，見 PAPER.md §5.3。"
+        ),
         "by_strength": by_strength,
         "trials": [t.__dict__ for t in trials],
     }
@@ -124,20 +152,35 @@ def main() -> int:
     ap.add_argument("--clips", type=int, default=None, help="限制測試的逐字稿數（省時用）")
     args = ap.parse_args()
 
-    if not TRANSCRIPTS_PATH.exists():
-        print(f"缺少逐字稿檔案：{TRANSCRIPTS_PATH}")
-        print("請先執行 python -m antifraud_v3.eval.make_transcripts 產生。")
-        return 1
+    for p, what in ((TRANSCRIPTS_PATH, "scam"), (BENIGN_PATH, "benign")):
+        if not p.exists():
+            print(f"缺少逐字稿：{p}")
+            print(f"請先執行 python -m antifraud_v3.eval.make_transcripts --category {what}")
+            return 1
 
-    transcripts = json.loads(TRANSCRIPTS_PATH.read_text(encoding="utf-8"))
-    print(f"對抗性改寫測試：{len(transcripts)} 份詐騙逐字稿 x {len(STRENGTHS)} 種強度\n")
-    result = run(transcripts, args.clips)
+    scam = json.loads(TRANSCRIPTS_PATH.read_text(encoding="utf-8"))
+    benign = json.loads(BENIGN_PATH.read_text(encoding="utf-8"))
+    print(f"對抗性改寫測試：詐騙 {len(scam)} + 正常 {len(benign)} 份 x {len(STRENGTHS)} 種強度")
+    result = run(scam, benign, args.clips)
 
-    print(f"\n{'強度':8s} {'n':>4s} {'偵測率':>8s} {'相對衰減':>9s} {'平均信心':>9s}")
+    print(f"\n{'強度':8s} {'偵測率':>9s} {'相對衰減':>9s} {'誤報率':>9s} {'信心(對)':>9s} {'信心(錯)':>9s}")
     for s, agg in result["by_strength"].items():
         drop = agg.get("relative_drop")
-        print(f"{s:8s} {agg['n']:4d} {agg['detection_rate']:8.1%} "
-              f"{(f'{drop:.1%}' if drop is not None else '—'):>9s} {agg['mean_confidence']:9.2f}")
+        far = agg.get("false_alarm_rate")
+        print(f"{s:8s} {agg['detection_rate']:9.1%} "
+              f"{(f'{drop:.1%}' if drop is not None else '—'):>9s} "
+              f"{(f'{far:.1%}' if far is not None else '—'):>9s} "
+              f"{agg['mean_conf_correct']:9.2f} {agg['mean_conf_wrong']:9.2f}")
+
+    # 替代解釋的檢定：誤報率若隨強度上升，衰減就不是「被規避」而是「變寬鬆」
+    fars = [a.get("false_alarm_rate") for a in result["by_strength"].values()]
+    if all(f is not None for f in fars):
+        if max(fars) > min(fars) + 0.1:
+            print("\n[注意] 誤報率隨改寫強度明顯變動——"
+                  "「改寫使分類器整體變保守」的替代解釋無法排除。")
+        else:
+            print("\n誤報率未隨改寫強度顯著變動——"
+                  "「改寫只是讓分類器整體變寬鬆」的替代解釋可排除。")
 
     worst = max((a.get("relative_drop", 0) for a in result["by_strength"].values()), default=0)
     print()

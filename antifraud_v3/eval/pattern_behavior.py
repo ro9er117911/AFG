@@ -31,6 +31,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
+from .provenance import stamp
 from ..reasoning.pattern_matcher import DEFAULT_EMOTION_THRESHOLD, PATTERN_DEFINITIONS, match_patterns
 from ..reasoning.schemas import ChunkEvidence, SemanticFeatureFinding, TextEmotionScores
 
@@ -125,6 +126,7 @@ def analyze(records: list[dict]) -> dict:
                 emo_over[k] += 1
 
     return {
+        "provenance": stamp(),
         "scope_note": (
             "本分析測的是規則表的『行為』，不是判定準確率。十模式無任何公開資料集提供 "
             "ground truth（專利自訂分類法），故準確率不可計算，亦不宣稱。"

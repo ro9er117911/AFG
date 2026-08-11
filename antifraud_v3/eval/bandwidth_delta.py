@@ -27,6 +27,7 @@ import json
 import time
 from pathlib import Path
 
+from .provenance import stamp
 from .teleantifraud import compute_metrics, Trial
 
 EVAL_DIR = Path(__file__).parent
@@ -121,6 +122,7 @@ def main() -> int:
     flips = [r["clip"] for r in rows if r["verdict_flipped"]]
 
     result = {
+        "provenance": stamp(),
         "scope_note": (
             "配對設計：同內容不同通道。語料為 edge-tts 合成語音經 G.711 編碼，"
             "非真人真實 PSTN 錄音——量到的是通道劣化的效果，不是真實電話環境的全部效果。"
