@@ -199,6 +199,9 @@ async def _run_and_send_final_analysis(
                 "fake_score": result.fake_score,
                 "ai_voice_flag": result.ai_voice_flag,
                 "fusion_source": result.fusion_source,
+                # 專利 TW I904863 S312「詐騙模式分析結果」——與 server/upload.py 的
+                # final_analysis 事件同一份欄位，兩條路徑（即時通話 / 上傳錄音）保持一致。
+                "matched_patterns": [p.model_dump() for p in result.matched_patterns],
                 "audio_quality": call_state.audio_quality,  # always None for live mic calls
                 "evidence": {
                     "transcript_segment": evidence.transcript_segment,

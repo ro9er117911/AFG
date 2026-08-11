@@ -18,7 +18,7 @@ pipeline/chunk_worker.py:run_final_analysis for the actual call order.
 """
 
 from ..detectors.scam_semantic import AntiFraudQwenResult, map_fraud_type
-from .schemas import ClaudeJustification, FraudTypeClassification, FusionResult, SynthesizeResult
+from .schemas import ClaudeJustification, FraudTypeClassification, FusionResult, MatchedPattern, SynthesizeResult
 
 _NO_SIGNAL_FRAUD_TYPE = FraudTypeClassification(
     fraud_type="unclassified", confidence="none", justification="Line 1（合成語音偵測）與 Line 2（話術詐騙偵測）均未偵測到明顯訊號。"
@@ -84,12 +84,23 @@ _FALLBACK_TEMPLATES = {
 }
 
 
-def build_synthesize_result(fusion: FusionResult, claude: ClaudeJustification | None) -> SynthesizeResult:
+def build_synthesize_result(
+    fusion: FusionResult,
+    claude: ClaudeJustification | None,
+    matched_patterns: list[MatchedPattern] | None = None,
+) -> SynthesizeResult:
     """Merges fusion's risk-defining fields with Claude's prose. claude=None (provider not
     configured, or the LLM call failed — see run_final_analysis's try/except) falls back to a
     template string built from fusion's own fields, so the app can still produce *a* verdict
     without a working LLM provider — a real robustness property unlocked by the verdict no
-    longer depending on Claude's own judgment at all."""
+    longer depending on Claude's own judgment at all.
+
+    matched_patterns carries 專利 TW I904863 S312's fraud-pattern marks. It's a separate
+    parameter rather than being derived here because S312 gates on "詐騙行為判定成立" —
+    fusion.is_fraud — while the marks themselves need text-emotion/semantic-feature evidence
+    that only a discriminate() call produces; the caller owns that sequencing (see
+    pipeline/chunk_worker.py's run_final_analysis). None and [] both mean "no marks", the
+    former because the patent path didn't run, the latter because it ran and matched nothing."""
     if claude is not None:
         hard_triggers = claude.hard_triggers
         justification = claude.justification
@@ -111,4 +122,5 @@ def build_synthesize_result(fusion: FusionResult, claude: ClaudeJustification | 
         fake_score=fusion.fake_score,
         ai_voice_flag=fusion.ai_voice_flag,
         fusion_source=fusion.fusion_source,
+        matched_patterns=matched_patterns or [],
     )

@@ -26,14 +26,21 @@ from ..asr.transcribe import transcribe_chunk
 from ..audio.egemaps import aggregate_egemaps, extract_egemaps, summarize_egemaps_highlight
 from ..audio.emotion import aggregate_emotion, predict_emotion, summarize_emotion
 from ..audio.features import aggregate_acoustic_features, extract_acoustic_features, summarize_acoustic_features
-from ..detectors.deepfake_voice import aggregate_deepfake, predict_deepfake, unload_model as unload_deepfake_model
+from ..detectors.deepfake_voice import (
+    DeepfakeChunkResult,
+    aggregate_deepfake,
+    predict_deepfake,
+    unload_model as unload_deepfake_model,
+)
 from ..detectors.scam_semantic import ScamSemanticError, classify_call
 from ..detectors.scam_semantic import unload_model as unload_scam_semantic_model
 from ..detectors.scam_semantic_llm import classify_call_via_llm
 from ..llm.base import LLMProvider, LLMProviderError
 from ..reasoning import run_reasoning_pipeline
+from ..reasoning.discriminate import discriminate
 from ..reasoning.fusion import build_synthesize_result, fuse
-from ..reasoning.schemas import ChunkEvidence, SynthesizeResult
+from ..reasoning.pattern_matcher import match_patterns
+from ..reasoning.schemas import ChunkEvidence, MatchedPattern, SynthesizeResult
 from ..storage.settings_store import load_settings
 from .call_state import Alert, CallState
 
@@ -116,7 +123,19 @@ def process_chunk_signals(
     egemaps_features = extract_egemaps(y, sr)
     baseline_just_set = call_state.maybe_set_baseline(acoustic_features, egemaps_features)
     emotion_label, emotion_probs = predict_emotion(y, sr)
-    deepfake_result = predict_deepfake(y, sr)
+    # Line 1 is best-effort: it needs a CUDA GPU and a ~4.3GB model, and neither is guaranteed
+    # (no-GPU machines, model download failures, OOM). An unguarded failure here propagated out
+    # through upload.py's asyncio.to_thread and killed the whole streaming response mid-call —
+    # the client got HTTP 200 with a truncated body and no verdict at all. Degrade instead:
+    # fake_score 0.0 means "Line 1 contributed nothing", which fuse() already handles by falling
+    # through to Line 2's branch. The "unavailable" label rides out on the existing deepfake
+    # field (_compact_deepfake) so the UI can distinguish "not checked" from a real 0.0 score —
+    # reporting the former as "confirmed not a deepfake" would be a different, false claim.
+    try:
+        deepfake_result = predict_deepfake(y, sr)
+    except Exception:
+        logger.warning("Line 1 (deepfake) unavailable for this chunk; continuing without it", exc_info=True)
+        deepfake_result = DeepfakeChunkResult(fake_score=0.0, label="unavailable")
 
     call_state.record_chunk_signals(
         transcript_text,
@@ -226,7 +245,13 @@ def run_final_analysis(
         unload_deepfake_model()
         try:
             line2_result = classify_call(full_audio, 16000, full_transcript)
-        except ScamSemanticError:
+        except Exception:
+            # Deliberately broader than ScamSemanticError: load_model() reaches
+            # Qwen2AudioForConditionalGeneration.from_pretrained, which raises transformers'
+            # and bitsandbytes' own exception types (e.g. ImportError when bitsandbytes is
+            # missing for the 4-bit load). Those escaped the old ScamSemanticError-only clause
+            # and killed the whole streaming response — the same failure mode Line 1 had.
+            # fuse() already accepts line2=None, so degrading here is the intended path.
             logger.exception("Line 2 (scam-semantic) classification failed; proceeding without it")
         finally:
             unload_scam_semantic_model()
@@ -240,6 +265,20 @@ def run_final_analysis(
         except LLMProviderError:
             logger.warning("Claude reasoning pipeline failed; falling back to template justification", exc_info=True)
 
-    result = build_synthesize_result(fusion_result, claude_result)
+    # 專利 TW I904863 步驟 S312：判定成立詐騙行為後，才依文字情緒 + 語意不合理特徵標記十種詐欺
+    # 模式。Gated on fusion_result.is_fraud (fuse()'s verdict), NOT on llm_final_summary_enabled
+    # — that setting governs whether Claude writes *prose*, and defaults to False, so hanging the
+    # patent path off it would silently produce zero marks on every call. discriminate() is
+    # called directly here rather than via run_reasoning_pipeline() because only its two evidence
+    # blocks are needed; reflect/synthesize add nothing this lookup reads.
+    matched_patterns: list[MatchedPattern] = []
+    if fusion_result.is_fraud and provider is not None:
+        try:
+            discriminated = discriminate(provider, evidence)
+            matched_patterns = match_patterns(discriminated.text_emotions, discriminated.semantic_features)
+        except LLMProviderError:
+            logger.warning("S312 pattern marking skipped: discriminate() failed", exc_info=True)
+
+    result = build_synthesize_result(fusion_result, claude_result, matched_patterns)
     alert = call_state.apply_final_result(result, timestamp=timestamp)
     return result, alert, evidence

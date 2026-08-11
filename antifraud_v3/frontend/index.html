@@ -253,6 +253,10 @@
      banner and 最終研判 text. */
   .info-badge.line1 { background: color-mix(in srgb, var(--chart-hnr) 16%, transparent); color: var(--chart-hnr); border-color: transparent; }
   .info-badge.line2 { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  /* patent = 專利 TW I904863 S312 的十種詐騙模式標記。刻意用虛線外框而非另一個實心色塊：這是
+     判定「成立之後」才附加的分類標記，不是第三條獨立偵測線，視覺上不該跟 line1/line2 平起平坐。
+     hover 時 title 會顯示命中的逐字稿引句。 */
+  .info-badge.patent { background: transparent; color: var(--ink-soft); border: 1px dashed var(--border); cursor: help; }
 
   .emo-badge {
     display: inline-flex; align-items: center; font-size: 11px; font-weight: 700;

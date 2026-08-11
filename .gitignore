@@ -3,3 +3,7 @@ __pycache__/
 .env
 *.log
 antifraud_v3/data/
+.venv/
+.venv311/
+.omc/
+.pytest_cache/

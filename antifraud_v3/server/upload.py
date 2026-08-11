@@ -145,6 +145,10 @@ async def stream_pipeline_over_audio(
         "fake_score": result.fake_score,
         "ai_voice_flag": result.ai_voice_flag,
         "fusion_source": result.fusion_source,
+        # 專利 TW I904863 S312「詐騙模式分析結果」——判定成立時才會有內容（見
+        # pipeline/chunk_worker.py 的 gating）。空清單代表「判定不成立」或「有判定但未命中任何
+        # 模式」，兩者對前端都是「沒有模式可顯示」。
+        "matched_patterns": [p.model_dump() for p in result.matched_patterns],
         "audio_quality": call_state.audio_quality,
         "evidence": {
             "transcript_segment": evidence.transcript_segment,

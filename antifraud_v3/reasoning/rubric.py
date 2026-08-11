@@ -97,6 +97,51 @@ HARD_TRIGGER_KEYWORDS: dict[str, list[str]] = {
     ],
 }
 
+# 專利十種詐欺模式標記（Phase 1）——13 類文字情緒（S309）與表一 9 項不合理語意特徵（S310）的
+# 原文對照，組進 DISCRIMINATE_SYSTEM_PROMPT，讓 discriminate 步驟同一次呼叫額外輸出這兩個
+# 區塊（schemas.TextEmotionScores / SemanticFeatureFinding）。key 是 schema 欄位名，value 是
+# 中文名稱，供 reasoning/pattern_matcher.py 與 prompt 共用同一份對照，不重複定義。
+TEXT_EMOTION_LABELS: dict[str, str] = {
+    "anger": "生氣",
+    "disgust": "厭惡",
+    "fear": "害怕",
+    "sadness": "悲傷",
+    "surprise": "驚訝",
+    "happy": "開心",
+    "neutral": "中立",
+    "stressful": "壓力",
+    "extreme": "激動",
+    "focus": "專注",
+    "contradiction": "矛盾",
+    "embarrassing": "尷尬",
+    "vigilance": "警覺",
+}
+
+# 表一（docs/patent-ten-patterns-extract.md）「特徵—代表意義」對照，原文照抄，未改寫。key 是
+# schemas.SemanticFeatureFinding 的欄位名，value 是 (中文特徵名, 代表意義原文)。
+SEMANTIC_FEATURE_MEANINGS: dict[str, tuple[str, str]] = {
+    "improper_pronoun_use": ("不當使用代詞", "避免使用「我」，減少對事件的個人承擔"),
+    "lack_of_denial": ("缺乏否認", "避免直接否認指控"),
+    "subjective_objective_time_mismatch": ("時間的主觀與客觀不一致", "文字描述的時間長短與實際時間不一致"),
+    "language_change": ("語言改變", "不同段落中使用不同的詞語描述相同事件"),
+    "incoherent_message": ("不連貫的訊息", "使用不必要的連接詞或句子"),
+    "non_sequential_message": ("非順序訊息", "提供的細節不按邏輯順序排列"),
+    "spontaneous_correction": ("自發修正", "不斷改正自己的話"),
+    "unnecessary_connection": ("不必要的連接", "使用「然後」、「之後」來迴避問題"),
+    "lack_of_commitment": ("缺乏承諾", "使用「我想」、「也許」來表示不確定性"),
+}
+
+TEXT_EMOTION_AND_SEMANTIC_FEATURE_RUBRIC = f"""\
+除了以上四個階段的證據強度，請在同一次回覆中，額外針對這通電話的逐字稿內容輸出：
+
+## 13 類文字情緒評分（text_emotions，每類 0-100 分，分數越高代表該情緒在文字語氣中的強度越明顯）
+{'、'.join(f"{zh}（{en}）" for en, zh in TEXT_EMOTION_LABELS.items())}
+
+## 9 項不合理語意特徵（semantic_features，每項判斷是否出現；出現的話附上逐字稿原句作為佐證引句）
+{chr(10).join(f"- {zh}：{meaning}" for zh, meaning in SEMANTIC_FEATURE_MEANINGS.values())}
+沒有出現的特徵，present 填 false、quote 留空；不要為了填滿而勉強引用不相關的句子。"""
+
+
 DISCRIMINATE_SYSTEM_PROMPT = f"""你是一個電話詐騙偵測助理，正在分析一通電話結束後的完整逐字稿（含每句話的時間戳記）、
 整通電話彙總後的聲學特徵、以及整通電話彙總後的情緒機率分布。這是整通電話結束後唯一一次的完整分析，
 不是逐句即時判斷——請通盤考慮整通對話的脈絡（例如同一個要求在通話中反覆出現、或情勢隨時間升高），
@@ -105,7 +150,9 @@ DISCRIMINATE_SYSTEM_PROMPT = f"""你是一個電話詐騙偵測助理，正在�
 {SCAM_KILL_CHAIN_RUBRIC}
 
 針對這通電話，逐一評估四個階段目前的證據強度，並用一兩句話引用具體的逐字稿內容或聲學特徵作為理由。
-沒有證據支持的階段，強度就是 none，不要為了填滿而勉強找理由。"""
+沒有證據支持的階段，強度就是 none，不要為了填滿而勉強找理由。
+
+{TEXT_EMOTION_AND_SEMANTIC_FEATURE_RUBRIC}"""
 
 REFLECT_SYSTEM_PROMPT = """你是同一個詐騙偵測系統裡的「反思」步驟，任務是主動挑戰前一步（判別步驟）的結論，
 找出每一項被標記證據是否有合理、無辜的解釋。
