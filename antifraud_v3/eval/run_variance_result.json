@@ -1,0 +1,152 @@
+{
+  "provenance": {
+    "utc_time": "2026-08-11T17:38:03.094074+00:00",
+    "git_commit": "32c733bcdf5ceac3761970d9973b079359e0bc9a",
+    "git_worktree_clean": true,
+    "llm_provider": "claude_code",
+    "llm_model_alias": "claude-opus-5",
+    "llm_effort": "medium",
+    "line2_backend": "claude",
+    "asr_backend": "whisper",
+    "emotion_backend": "wavlm",
+    "claude_cli_version": "2.1.223 (Claude Code)",
+    "python": "3.11.10",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
+  },
+  "purpose": "量測 LLM 判定的重跑變異。任何小於此變異的效應都無法被偵測——這個數字界定了本專案所有比較的解析度下限。",
+  "repeats": 5,
+  "n_clips": 6,
+  "n_unstable": 0,
+  "unstable_rate": 0.0,
+  "unstable_clips": [],
+  "mean_conf_stdev": 0.002,
+  "per_clip": [
+    {
+      "clip": "bank_otp_request.wav",
+      "label_is_scam": true,
+      "n": 5,
+      "verdicts": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "unstable": false,
+      "majority_verdict": true,
+      "majority_share": 1.0,
+      "conf_mean": 0.962,
+      "conf_stdev": 0.004,
+      "conf_range": [
+        0.96,
+        0.97
+      ]
+    },
+    {
+      "clip": "courier_customs_package_scam.wav",
+      "label_is_scam": true,
+      "n": 5,
+      "verdicts": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "unstable": false,
+      "majority_verdict": true,
+      "majority_share": 1.0,
+      "conf_mean": 0.968,
+      "conf_stdev": 0.004,
+      "conf_range": [
+        0.96,
+        0.97
+      ]
+    },
+    {
+      "clip": "crypto_investment_scam.wav",
+      "label_is_scam": true,
+      "n": 5,
+      "verdicts": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "unstable": false,
+      "majority_verdict": true,
+      "majority_share": 1.0,
+      "conf_mean": 0.968,
+      "conf_stdev": 0.004,
+      "conf_range": [
+        0.96,
+        0.97
+      ]
+    },
+    {
+      "clip": "calm_weekend_catchup.wav",
+      "label_is_scam": false,
+      "n": 5,
+      "verdicts": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "unstable": false,
+      "majority_verdict": false,
+      "majority_share": 1.0,
+      "conf_mean": 0.95,
+      "conf_stdev": 0.0,
+      "conf_range": [
+        0.95,
+        0.95
+      ]
+    },
+    {
+      "clip": "dinner_chat.wav",
+      "label_is_scam": false,
+      "n": 5,
+      "verdicts": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "unstable": false,
+      "majority_verdict": false,
+      "majority_share": 1.0,
+      "conf_mean": 0.95,
+      "conf_stdev": 0.0,
+      "conf_range": [
+        0.95,
+        0.95
+      ]
+    },
+    {
+      "clip": "genuine_family_emergency_not_fraud.wav",
+      "label_is_scam": false,
+      "n": 5,
+      "verdicts": [
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "unstable": false,
+      "majority_verdict": false,
+      "majority_share": 1.0,
+      "conf_mean": 0.88,
+      "conf_stdev": 0.0,
+      "conf_range": [
+        0.88,
+        0.88
+      ]
+    }
+  ]
+}
