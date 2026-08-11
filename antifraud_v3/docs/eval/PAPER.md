@@ -107,8 +107,43 @@ Speech DF Arena（2025）在 **15 個資料集**上評測同一個模型：
 fuse(fake_score: float, line2: AntiFraudQwenResult | None, threshold: float)
 ```
 
-只接受 Line 1 的分數與 Line 2 的結果。**沒有任何聲學特徵進入。**
-jitter、shimmer、HNR、F0、eGeMAPS 88 維全部只用於介面的描述性呈現。
+只接受 Line 1 的分數與 Line 2 的結果。**沒有任何聲學特徵進入這個函式。**
+
+### 3.1 這個宣稱的精確邊界（自我查核結果）
+
+「聲學不參與判定」若不加限定，會是**過度宣稱**。我們追查了完整的資料流，
+以下是精確的版本：
+
+`build_synthesize_result()` 中，LLM 的輸出只影響三個欄位：
+`hard_triggers`、`justification`、`case_memory_update`——即**檢查清單與文字說明**。
+
+所有風險欄位皆直接來自 `fusion.*`，與 LLM 無關：
+
+| 欄位 | 來源 |
+|---|---|
+| `risk_level` | `fusion.risk_level` |
+| `chunk_risk_score` | `fusion.chunk_risk_score` |
+| `fraud_type` | `fusion.fraud_type` |
+| `fake_score` / `ai_voice_flag` / `fusion_source` | `fusion.*` |
+
+**但有一個必須揭露的例外**：`discriminate()` 的 prompt **確實包含 `acoustic_summary`**，
+而 `call_state.apply_final_result()` 中，`hard_triggers` 裡任何一項 `fired`
+**可以獨立觸發告警**，不經過 `risk_level`。
+
+因此精確的宣稱是：
+
+> **聲學特徵不影響風險等級（`risk_level`）與詐騙判定（`is_fraud`）；
+> 但聲學摘要會出現在 LLM 的 prompt 中，而 LLM 產生的 hard-trigger 檢查清單
+> 可以獨立觸發使用者可見的告警。**
+
+這個路徑在預設設定下不啟用（`llm_final_summary_enabled` 預設為 `false`，
+此時 `claude_result` 為 `None`、`hard_triggers` 為空清單），
+但**啟用後聲學就有了一條間接影響告警的路徑**。
+
+我們選擇揭露這一點，而不是維持一個聽起來更乾淨、但在啟用該設定後不成立的說法。
+
+jitter、shimmer、HNR、F0、eGeMAPS 88 維在**風險判定**上不被使用；
+在介面上作描述性呈現，在 LLM prompt 中作為情境資訊。
 
 四條互相獨立的證據支持這個決定：
 
