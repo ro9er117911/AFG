@@ -10,7 +10,7 @@ import numpy as np
 
 from antifraud_v3.audio.features import extract_acoustic_features
 
-from antifraud_v3.detectors.scam_semantic import AntiFraudQwenResult
+from antifraud_v3.detectors.scam_semantic import AntiFraudQwenResult, ScamSemanticError
 from antifraud_v3.pipeline import chunk_worker
 from antifraud_v3.pipeline.call_state import CallState
 from antifraud_v3.reasoning.pattern_matcher import DEFAULT_EMOTION_THRESHOLD, match_patterns
@@ -230,3 +230,34 @@ def test_patterns_are_not_marked_when_fusion_says_no_fraud(monkeypatch):
     assert result.risk_level == "low"
     assert result.matched_patterns == []
     assert called == [], "S312 未判定成立時不應呼叫 discriminate"
+
+
+# ---- 降級路徑：偵測器掛掉不得炸掉整條分析（demo 可靠性）----
+
+
+def test_line1_failure_does_not_abort_the_analysis(monkeypatch):
+    """Line 1 沒有 CUDA/模型時會丟例外。整條分析必須照樣產出判定，而不是讓串流中斷。"""
+    monkeypatch.setattr(chunk_worker, "predict_deepfake",
+                        lambda y, sr: (_ for _ in ()).throw(RuntimeError("no CUDA")))
+    monkeypatch.setattr(chunk_worker, "transcribe_chunk", lambda y, sr: "測試逐字稿")
+    monkeypatch.setattr(chunk_worker, "predict_emotion", lambda y, sr: ("neutral", {"neutral": 1.0}))
+
+    out = chunk_worker.process_chunk_signals(np.zeros(16000, dtype=np.float32), 16000, CallState())
+    assert out is not None, "Line 1 失敗不得讓整個 chunk 被丟掉"
+    assert out.deepfake["label"] == "unavailable", "必須能區分「沒檢查」與「確定不是深偽」"
+
+
+def test_line2_non_scamsemantic_error_does_not_abort_the_analysis(monkeypatch):
+    """Line 2 載模型時丟的是 ImportError（缺 bitsandbytes），不是 ScamSemanticError。
+    舊的 except 子句接不到，會炸掉整條串流；現在必須降級成沒有 Line 2 的判定。"""
+    monkeypatch.setattr(chunk_worker, "classify_call_via_llm",
+                        lambda provider, transcript: (_ for _ in ()).throw(
+                            ScamSemanticError("claude backend unavailable")))
+    monkeypatch.setattr(chunk_worker, "classify_call",
+                        lambda *a, **kw: (_ for _ in ()).throw(ImportError("requires bitsandbytes")))
+
+    out = chunk_worker.run_final_analysis(object(), _call_state_with_transcript())
+    assert out is not None
+    result, _alert, _evidence = out
+    assert result.risk_level == "low"
+    assert result.fusion_source == "none"

@@ -26,7 +26,12 @@ from ..asr.transcribe import transcribe_chunk
 from ..audio.egemaps import aggregate_egemaps, extract_egemaps, summarize_egemaps_highlight
 from ..audio.emotion import aggregate_emotion, predict_emotion, summarize_emotion
 from ..audio.features import aggregate_acoustic_features, extract_acoustic_features, summarize_acoustic_features
-from ..detectors.deepfake_voice import aggregate_deepfake, predict_deepfake, unload_model as unload_deepfake_model
+from ..detectors.deepfake_voice import (
+    DeepfakeChunkResult,
+    aggregate_deepfake,
+    predict_deepfake,
+    unload_model as unload_deepfake_model,
+)
 from ..detectors.scam_semantic import ScamSemanticError, classify_call
 from ..detectors.scam_semantic import unload_model as unload_scam_semantic_model
 from ..detectors.scam_semantic_llm import classify_call_via_llm
@@ -118,7 +123,19 @@ def process_chunk_signals(
     egemaps_features = extract_egemaps(y, sr)
     baseline_just_set = call_state.maybe_set_baseline(acoustic_features, egemaps_features)
     emotion_label, emotion_probs = predict_emotion(y, sr)
-    deepfake_result = predict_deepfake(y, sr)
+    # Line 1 is best-effort: it needs a CUDA GPU and a ~4.3GB model, and neither is guaranteed
+    # (no-GPU machines, model download failures, OOM). An unguarded failure here propagated out
+    # through upload.py's asyncio.to_thread and killed the whole streaming response mid-call —
+    # the client got HTTP 200 with a truncated body and no verdict at all. Degrade instead:
+    # fake_score 0.0 means "Line 1 contributed nothing", which fuse() already handles by falling
+    # through to Line 2's branch. The "unavailable" label rides out on the existing deepfake
+    # field (_compact_deepfake) so the UI can distinguish "not checked" from a real 0.0 score —
+    # reporting the former as "confirmed not a deepfake" would be a different, false claim.
+    try:
+        deepfake_result = predict_deepfake(y, sr)
+    except Exception:
+        logger.warning("Line 1 (deepfake) unavailable for this chunk; continuing without it", exc_info=True)
+        deepfake_result = DeepfakeChunkResult(fake_score=0.0, label="unavailable")
 
     call_state.record_chunk_signals(
         transcript_text,
@@ -228,7 +245,13 @@ def run_final_analysis(
         unload_deepfake_model()
         try:
             line2_result = classify_call(full_audio, 16000, full_transcript)
-        except ScamSemanticError:
+        except Exception:
+            # Deliberately broader than ScamSemanticError: load_model() reaches
+            # Qwen2AudioForConditionalGeneration.from_pretrained, which raises transformers'
+            # and bitsandbytes' own exception types (e.g. ImportError when bitsandbytes is
+            # missing for the 4-bit load). Those escaped the old ScamSemanticError-only clause
+            # and killed the whole streaming response — the same failure mode Line 1 had.
+            # fuse() already accepts line2=None, so degrading here is the intended path.
             logger.exception("Line 2 (scam-semantic) classification failed; proceeding without it")
         finally:
             unload_scam_semantic_model()
