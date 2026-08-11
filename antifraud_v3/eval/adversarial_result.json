@@ -1,0 +1,302 @@
+{
+  "reference": "Li et al. 2025, arXiv:2507.16291 — GPT-4o 改寫致準確率下降 30.96%",
+  "protocol_threshold": 0.3,
+  "by_strength": {
+    "none": {
+      "n": 13,
+      "detected": 13,
+      "detection_rate": 1.0,
+      "mean_confidence": 0.9569,
+      "relative_drop": 0.0
+    },
+    "light": {
+      "n": 13,
+      "detected": 9,
+      "detection_rate": 0.6923,
+      "mean_confidence": 0.9415,
+      "relative_drop": 0.3077
+    },
+    "heavy": {
+      "n": 13,
+      "detected": 5,
+      "detection_rate": 0.3846,
+      "mean_confidence": 0.7969,
+      "relative_drop": 0.6154
+    }
+  },
+  "trials": [
+    {
+      "clip": "bank_otp_request.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.96,
+      "fraud_type": "banking_fraud"
+    },
+    {
+      "clip": "bank_otp_request.wav",
+      "strength": "light",
+      "is_fraud": true,
+      "confidence": 0.96,
+      "fraud_type": "banking_fraud"
+    },
+    {
+      "clip": "bank_otp_request.wav",
+      "strength": "heavy",
+      "is_fraud": false,
+      "confidence": 0.62,
+      "fraud_type": null
+    },
+    {
+      "clip": "courier_customs_package_scam.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.97,
+      "fraud_type": "identity_theft"
+    },
+    {
+      "clip": "courier_customs_package_scam.wav",
+      "strength": "light",
+      "is_fraud": false,
+      "confidence": 0.93,
+      "fraud_type": null
+    },
+    {
+      "clip": "courier_customs_package_scam.wav",
+      "strength": "heavy",
+      "is_fraud": false,
+      "confidence": 0.82,
+      "fraud_type": null
+    },
+    {
+      "clip": "crypto_investment_scam.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.97,
+      "fraud_type": "investment_fraud"
+    },
+    {
+      "clip": "crypto_investment_scam.wav",
+      "strength": "light",
+      "is_fraud": true,
+      "confidence": 0.97,
+      "fraud_type": "investment_fraud"
+    },
+    {
+      "clip": "crypto_investment_scam.wav",
+      "strength": "heavy",
+      "is_fraud": false,
+      "confidence": 0.82,
+      "fraud_type": null
+    },
+    {
+      "clip": "fake_credit_card_suspension.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.95,
+      "fraud_type": "banking_fraud"
+    },
+    {
+      "clip": "fake_credit_card_suspension.wav",
+      "strength": "light",
+      "is_fraud": true,
+      "confidence": 0.96,
+      "fraud_type": "banking_fraud"
+    },
+    {
+      "clip": "fake_credit_card_suspension.wav",
+      "strength": "heavy",
+      "is_fraud": false,
+      "confidence": 0.2,
+      "fraud_type": null
+    },
+    {
+      "clip": "fake_debt_collection_threat.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.93,
+      "fraud_type": "extortion_fraud"
+    },
+    {
+      "clip": "fake_debt_collection_threat.wav",
+      "strength": "light",
+      "is_fraud": true,
+      "confidence": 0.95,
+      "fraud_type": "extortion_fraud"
+    },
+    {
+      "clip": "fake_debt_collection_threat.wav",
+      "strength": "heavy",
+      "is_fraud": true,
+      "confidence": 0.82,
+      "fraud_type": "extortion_fraud"
+    },
+    {
+      "clip": "fake_health_insurance_notice.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.94,
+      "fraud_type": "identity_theft"
+    },
+    {
+      "clip": "fake_health_insurance_notice.wav",
+      "strength": "light",
+      "is_fraud": true,
+      "confidence": 0.95,
+      "fraud_type": "identity_theft"
+    },
+    {
+      "clip": "fake_health_insurance_notice.wav",
+      "strength": "heavy",
+      "is_fraud": false,
+      "confidence": 0.86,
+      "fraud_type": null
+    },
+    {
+      "clip": "fake_job_recruitment_scam.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.93,
+      "fraud_type": "unclassified"
+    },
+    {
+      "clip": "fake_job_recruitment_scam.wav",
+      "strength": "light",
+      "is_fraud": true,
+      "confidence": 0.93,
+      "fraud_type": "unclassified"
+    },
+    {
+      "clip": "fake_job_recruitment_scam.wav",
+      "strength": "heavy",
+      "is_fraud": true,
+      "confidence": 0.93,
+      "fraud_type": "unclassified"
+    },
+    {
+      "clip": "fake_kidnapping_emergency.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.96,
+      "fraud_type": "identity_theft"
+    },
+    {
+      "clip": "fake_kidnapping_emergency.wav",
+      "strength": "light",
+      "is_fraud": false,
+      "confidence": 0.9,
+      "fraud_type": null
+    },
+    {
+      "clip": "fake_kidnapping_emergency.wav",
+      "strength": "heavy",
+      "is_fraud": true,
+      "confidence": 0.96,
+      "fraud_type": "identity_theft"
+    },
+    {
+      "clip": "fake_prosecutor_investigation.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.98,
+      "fraud_type": "identity_theft"
+    },
+    {
+      "clip": "fake_prosecutor_investigation.wav",
+      "strength": "light",
+      "is_fraud": false,
+      "confidence": 0.93,
+      "fraud_type": null
+    },
+    {
+      "clip": "fake_prosecutor_investigation.wav",
+      "strength": "heavy",
+      "is_fraud": false,
+      "confidence": 0.88,
+      "fraud_type": null
+    },
+    {
+      "clip": "online_shopping_refund_scam.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.96,
+      "fraud_type": "customer_service_fraud"
+    },
+    {
+      "clip": "online_shopping_refund_scam.wav",
+      "strength": "light",
+      "is_fraud": true,
+      "confidence": 0.97,
+      "fraud_type": "customer_service_fraud"
+    },
+    {
+      "clip": "online_shopping_refund_scam.wav",
+      "strength": "heavy",
+      "is_fraud": false,
+      "confidence": 0.9,
+      "fraud_type": null
+    },
+    {
+      "clip": "romance_scam_gift_request.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.96,
+      "fraud_type": "unclassified"
+    },
+    {
+      "clip": "romance_scam_gift_request.wav",
+      "strength": "light",
+      "is_fraud": false,
+      "confidence": 0.88,
+      "fraud_type": null
+    },
+    {
+      "clip": "romance_scam_gift_request.wav",
+      "strength": "heavy",
+      "is_fraud": false,
+      "confidence": 0.86,
+      "fraud_type": null
+    },
+    {
+      "clip": "tech_support_virus_scam.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.96,
+      "fraud_type": "customer_service_fraud"
+    },
+    {
+      "clip": "tech_support_virus_scam.wav",
+      "strength": "light",
+      "is_fraud": true,
+      "confidence": 0.96,
+      "fraud_type": "customer_service_fraud"
+    },
+    {
+      "clip": "tech_support_virus_scam.wav",
+      "strength": "heavy",
+      "is_fraud": true,
+      "confidence": 0.97,
+      "fraud_type": "customer_service_fraud"
+    },
+    {
+      "clip": "utility_bill_overdue_scam.wav",
+      "strength": "none",
+      "is_fraud": true,
+      "confidence": 0.97,
+      "fraud_type": "phishing_fraud"
+    },
+    {
+      "clip": "utility_bill_overdue_scam.wav",
+      "strength": "light",
+      "is_fraud": true,
+      "confidence": 0.95,
+      "fraud_type": "phishing_fraud"
+    },
+    {
+      "clip": "utility_bill_overdue_scam.wav",
+      "strength": "heavy",
+      "is_fraud": true,
+      "confidence": 0.72,
+      "fraud_type": "phishing_fraud"
+    }
+  ]
+}
