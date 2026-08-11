@@ -1,0 +1,433 @@
+{
+  "threshold": 0.2,
+  "summary": {
+    "mean_pitch": {
+      "median_cv": 0.028,
+      "max_cv": 0.072,
+      "n_clips": 14,
+      "unstable": false
+    },
+    "jitter_local": {
+      "median_cv": 0.0768,
+      "max_cv": 0.1686,
+      "n_clips": 14,
+      "unstable": false
+    },
+    "shimmer_local": {
+      "median_cv": 0.0552,
+      "max_cv": 0.1398,
+      "n_clips": 14,
+      "unstable": false
+    },
+    "hnr": {
+      "median_cv": 0.0812,
+      "max_cv": 0.2154,
+      "n_clips": 14,
+      "unstable": false
+    },
+    "pause_ratio": {
+      "median_cv": 0.2343,
+      "max_cv": 0.469,
+      "n_clips": 12,
+      "unstable": true
+    }
+  },
+  "per_clip": [
+    {
+      "clip": "benign/calm_weekend_catchup.wav",
+      "n_chunks": 3,
+      "mean_pitch": {
+        "cv": 0.072,
+        "min": 187.11,
+        "max": 211.68
+      },
+      "jitter_local": {
+        "cv": 0.1475,
+        "min": 1.55,
+        "max": 2.08
+      },
+      "shimmer_local": {
+        "cv": 0.1135,
+        "min": 6.12,
+        "max": 7.57
+      },
+      "hnr": {
+        "cv": 0.1016,
+        "min": 12.39,
+        "max": 14.97
+      },
+      "pause_ratio": {
+        "cv": 0.3566,
+        "min": 6.59,
+        "max": 13.73
+      }
+    },
+    {
+      "clip": "benign/dinner_chat.wav",
+      "n_chunks": 4,
+      "mean_pitch": {
+        "cv": 0.0332,
+        "min": 117.78,
+        "max": 127.01
+      },
+      "jitter_local": {
+        "cv": 0.1171,
+        "min": 3.16,
+        "max": 4.07
+      },
+      "shimmer_local": {
+        "cv": 0.1311,
+        "min": 9.72,
+        "max": 12.82
+      },
+      "hnr": {
+        "cv": 0.0678,
+        "min": 9.27,
+        "max": 10.94
+      },
+      "pause_ratio": {
+        "cv": 0.469,
+        "min": 8.98,
+        "max": 23.24
+      }
+    },
+    {
+      "clip": "benign/legit_bank_balance_inquiry.wav",
+      "n_chunks": 3,
+      "mean_pitch": {
+        "cv": 0.0241,
+        "min": 184.07,
+        "max": 192.04
+      },
+      "jitter_local": {
+        "cv": 0.1269,
+        "min": 1.53,
+        "max": 1.97
+      },
+      "shimmer_local": {
+        "cv": 0.1027,
+        "min": 6.15,
+        "max": 7.53
+      },
+      "hnr": {
+        "cv": 0.1059,
+        "min": 14.47,
+        "max": 17.55
+      }
+    },
+    {
+      "clip": "benign/mild_annoyance_unrelated_to_fraud.wav",
+      "n_chunks": 3,
+      "mean_pitch": {
+        "cv": 0.0584,
+        "min": 172.51,
+        "max": 191.3
+      },
+      "jitter_local": {
+        "cv": 0.034,
+        "min": 1.61,
+        "max": 1.71
+      },
+      "shimmer_local": {
+        "cv": 0.0214,
+        "min": 7.6,
+        "max": 7.92
+      },
+      "hnr": {
+        "cv": 0.2154,
+        "min": 10.55,
+        "max": 15.82
+      }
+    },
+    {
+      "clip": "scam/bank_otp_request.wav",
+      "n_chunks": 3,
+      "mean_pitch": {
+        "cv": 0.013,
+        "min": 192.13,
+        "max": 197.19
+      },
+      "jitter_local": {
+        "cv": 0.0901,
+        "min": 1.8,
+        "max": 2.12
+      },
+      "shimmer_local": {
+        "cv": 0.0309,
+        "min": 6.88,
+        "max": 7.28
+      },
+      "hnr": {
+        "cv": 0.081,
+        "min": 12.79,
+        "max": 14.91
+      },
+      "pause_ratio": {
+        "cv": 0.0658,
+        "min": 16.03,
+        "max": 18.29
+      }
+    },
+    {
+      "clip": "scam/courier_customs_package_scam.wav",
+      "n_chunks": 3,
+      "mean_pitch": {
+        "cv": 0.0244,
+        "min": 189.29,
+        "max": 197.76
+      },
+      "jitter_local": {
+        "cv": 0.0669,
+        "min": 1.83,
+        "max": 2.1
+      },
+      "shimmer_local": {
+        "cv": 0.0478,
+        "min": 6.86,
+        "max": 7.55
+      },
+      "hnr": {
+        "cv": 0.0813,
+        "min": 12.5,
+        "max": 14.63
+      },
+      "pause_ratio": {
+        "cv": 0.2844,
+        "min": 8.36,
+        "max": 14.17
+      }
+    },
+    {
+      "clip": "scam/crypto_investment_scam.wav",
+      "n_chunks": 3,
+      "mean_pitch": {
+        "cv": 0.0293,
+        "min": 122.27,
+        "max": 129.63
+      },
+      "jitter_local": {
+        "cv": 0.0798,
+        "min": 3.06,
+        "max": 3.59
+      },
+      "shimmer_local": {
+        "cv": 0.0449,
+        "min": 10.66,
+        "max": 11.61
+      },
+      "hnr": {
+        "cv": 0.0958,
+        "min": 9.03,
+        "max": 10.71
+      },
+      "pause_ratio": {
+        "cv": 0.1402,
+        "min": 12.52,
+        "max": 16.6
+      }
+    },
+    {
+      "clip": "scam/fake_credit_card_suspension.wav",
+      "n_chunks": 4,
+      "mean_pitch": {
+        "cv": 0.0659,
+        "min": 168.84,
+        "max": 193.95
+      },
+      "jitter_local": {
+        "cv": 0.1686,
+        "min": 1.56,
+        "max": 2.24
+      },
+      "shimmer_local": {
+        "cv": 0.1398,
+        "min": 6.46,
+        "max": 9.02
+      },
+      "hnr": {
+        "cv": 0.1019,
+        "min": 12.37,
+        "max": 15.37
+      },
+      "pause_ratio": {
+        "cv": 0.17,
+        "min": 8.45,
+        "max": 11.73
+      }
+    },
+    {
+      "clip": "scam/fake_debt_collection_threat.wav",
+      "n_chunks": 3,
+      "mean_pitch": {
+        "cv": 0.0267,
+        "min": 122.45,
+        "max": 128.81
+      },
+      "jitter_local": {
+        "cv": 0.1141,
+        "min": 3.16,
+        "max": 3.94
+      },
+      "shimmer_local": {
+        "cv": 0.0625,
+        "min": 10.7,
+        "max": 12.03
+      },
+      "hnr": {
+        "cv": 0.136,
+        "min": 8.85,
+        "max": 11.54
+      },
+      "pause_ratio": {
+        "cv": 0.2644,
+        "min": 13.33,
+        "max": 22.95
+      }
+    },
+    {
+      "clip": "scam/fake_health_insurance_notice.wav",
+      "n_chunks": 3,
+      "mean_pitch": {
+        "cv": 0.0154,
+        "min": 188.94,
+        "max": 194.42
+      },
+      "jitter_local": {
+        "cv": 0.0524,
+        "min": 1.74,
+        "max": 1.92
+      },
+      "shimmer_local": {
+        "cv": 0.0446,
+        "min": 6.91,
+        "max": 7.54
+      },
+      "hnr": {
+        "cv": 0.0353,
+        "min": 13.31,
+        "max": 14.15
+      },
+      "pause_ratio": {
+        "cv": 0.1572,
+        "min": 13.01,
+        "max": 17.59
+      }
+    },
+    {
+      "clip": "scam/fake_prosecutor_investigation.wav",
+      "n_chunks": 4,
+      "mean_pitch": {
+        "cv": 0.0412,
+        "min": 117.5,
+        "max": 129.04
+      },
+      "jitter_local": {
+        "cv": 0.0527,
+        "min": 3.21,
+        "max": 3.63
+      },
+      "shimmer_local": {
+        "cv": 0.0355,
+        "min": 11.25,
+        "max": 11.98
+      },
+      "hnr": {
+        "cv": 0.0679,
+        "min": 9.45,
+        "max": 10.91
+      },
+      "pause_ratio": {
+        "cv": 0.2042,
+        "min": 13.69,
+        "max": 19.67
+      }
+    },
+    {
+      "clip": "scam/online_shopping_refund_scam.wav",
+      "n_chunks": 3,
+      "mean_pitch": {
+        "cv": 0.0247,
+        "min": 187.5,
+        "max": 196.12
+      },
+      "jitter_local": {
+        "cv": 0.0114,
+        "min": 1.64,
+        "max": 1.68
+      },
+      "shimmer_local": {
+        "cv": 0.0661,
+        "min": 6.84,
+        "max": 7.81
+      },
+      "hnr": {
+        "cv": 0.0341,
+        "min": 15.21,
+        "max": 16.28
+      },
+      "pause_ratio": {
+        "cv": 0.3226,
+        "min": 6.93,
+        "max": 13.25
+      }
+    },
+    {
+      "clip": "scam/romance_scam_gift_request.wav",
+      "n_chunks": 3,
+      "mean_pitch": {
+        "cv": 0.0126,
+        "min": 185.74,
+        "max": 190.11
+      },
+      "jitter_local": {
+        "cv": 0.0483,
+        "min": 1.6,
+        "max": 1.76
+      },
+      "shimmer_local": {
+        "cv": 0.0126,
+        "min": 7.53,
+        "max": 7.72
+      },
+      "hnr": {
+        "cv": 0.0278,
+        "min": 14.53,
+        "max": 15.36
+      },
+      "pause_ratio": {
+        "cv": 0.327,
+        "min": 8.73,
+        "max": 16.73
+      }
+    },
+    {
+      "clip": "scam/tech_support_virus_scam.wav",
+      "n_chunks": 4,
+      "mean_pitch": {
+        "cv": 0.049,
+        "min": 173.62,
+        "max": 193.49
+      },
+      "jitter_local": {
+        "cv": 0.0737,
+        "min": 1.45,
+        "max": 1.74
+      },
+      "shimmer_local": {
+        "cv": 0.0688,
+        "min": 6.94,
+        "max": 8.13
+      },
+      "hnr": {
+        "cv": 0.0553,
+        "min": 14.45,
+        "max": 16.26
+      },
+      "pause_ratio": {
+        "cv": 0.1896,
+        "min": 8.86,
+        "max": 12.66
+      }
+    }
+  ]
+}
