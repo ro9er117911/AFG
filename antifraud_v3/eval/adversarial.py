@@ -60,6 +60,10 @@ class Trial:
     confidence: float
     fraud_type: str | None
     label_is_scam: bool = True  # benign 對照組為 False
+    # 改寫後的實際文本。實測顯示變異來自改寫器而非分類器（見 eval/run_variance.py：
+    # 同一輸入重複判定 0/6 不穩定），因此要讓 Q3 可重現，必須把每次實際餵給分類器的
+    # 文本留下來——只 pin 模型版本不夠。
+    rewritten_text: str = ""
 
 
 def rewrite(provider, transcript: str, instruction: str) -> str:
@@ -102,7 +106,7 @@ def run(scam: dict[str, str], benign: dict[str, str], limit: int | None) -> dict
                     print(f"  [{name} / {strength}] 分類失敗，跳過：{e}")
                     continue
                 trials.append(Trial(name, strength, r.is_fraud, r.confidence,
-                                    r.fraud_type_raw, label_is_scam))
+                                    r.fraud_type_raw, label_is_scam, text))
                 print(f"  {name:42s} {strength:6s} is_fraud={r.is_fraud} conf={r.confidence:.2f}")
                 time.sleep(0.5)  # 對 CLI provider 客氣一點，避免連續打爆
 
