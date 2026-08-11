@@ -32,8 +32,10 @@ from ..detectors.scam_semantic import unload_model as unload_scam_semantic_model
 from ..detectors.scam_semantic_llm import classify_call_via_llm
 from ..llm.base import LLMProvider, LLMProviderError
 from ..reasoning import run_reasoning_pipeline
+from ..reasoning.discriminate import discriminate
 from ..reasoning.fusion import build_synthesize_result, fuse
-from ..reasoning.schemas import ChunkEvidence, SynthesizeResult
+from ..reasoning.pattern_matcher import match_patterns
+from ..reasoning.schemas import ChunkEvidence, MatchedPattern, SynthesizeResult
 from ..storage.settings_store import load_settings
 from .call_state import Alert, CallState
 
@@ -240,6 +242,20 @@ def run_final_analysis(
         except LLMProviderError:
             logger.warning("Claude reasoning pipeline failed; falling back to template justification", exc_info=True)
 
-    result = build_synthesize_result(fusion_result, claude_result)
+    # 專利 TW I904863 步驟 S312：判定成立詐騙行為後，才依文字情緒 + 語意不合理特徵標記十種詐欺
+    # 模式。Gated on fusion_result.is_fraud (fuse()'s verdict), NOT on llm_final_summary_enabled
+    # — that setting governs whether Claude writes *prose*, and defaults to False, so hanging the
+    # patent path off it would silently produce zero marks on every call. discriminate() is
+    # called directly here rather than via run_reasoning_pipeline() because only its two evidence
+    # blocks are needed; reflect/synthesize add nothing this lookup reads.
+    matched_patterns: list[MatchedPattern] = []
+    if fusion_result.is_fraud and provider is not None:
+        try:
+            discriminated = discriminate(provider, evidence)
+            matched_patterns = match_patterns(discriminated.text_emotions, discriminated.semantic_features)
+        except LLMProviderError:
+            logger.warning("S312 pattern marking skipped: discriminate() failed", exc_info=True)
+
+    result = build_synthesize_result(fusion_result, claude_result, matched_patterns)
     alert = call_state.apply_final_result(result, timestamp=timestamp)
     return result, alert, evidence
