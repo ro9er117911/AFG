@@ -1,0 +1,144 @@
+{
+  "profile": "g711_alaw",
+  "sample_rate": 8000,
+  "clips": [
+    {
+      "source": "benign/calm_weekend_catchup.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "512a1ea62d6cf68c1516a05ee704f5087112d05ce0a166f42759f9126e3be935",
+      "output_sha256": "acf9b0f1ec011c0ebee2d5e797eeff57d15c0d85a54acdb50f09efc8af425b23"
+    },
+    {
+      "source": "benign/dinner_chat.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "1786fe7518186446d348e46e991588ca508b2fdb21d93ae1deb7fa5483ec8df0",
+      "output_sha256": "bf613e777b26f4beba4ef82806366662f54a8d40601bc83b5c1fd81215cd5328"
+    },
+    {
+      "source": "benign/genuine_family_emergency_not_fraud.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "e447551aeda8a87f744ed8c8805c8707ff1052e2e557004d5905ecea476925c0",
+      "output_sha256": "74aec97622b66c26044d9f410056e4480b907cc0b9e1679f41aa151571a922f0"
+    },
+    {
+      "source": "benign/hesitant_pauses_deciding.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "41ffe7908b7fe38bb93c4bb23ddec24c0370b8ba0a8ed2293b94d64d7faab153",
+      "output_sha256": "d55617c858824d6a94d29b0f09cf191ac625a7dcb294352b08969a20621fe28f"
+    },
+    {
+      "source": "benign/legit_bank_balance_inquiry.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "62b00a94af8e4dd3e81ba019072f3599396907874958e942991260fb7ae3e9ee",
+      "output_sha256": "ef2dadc0a0a5ebf94081f620523a3e276559b7bc313e607039fe780f25f0bbfa"
+    },
+    {
+      "source": "benign/legit_courier_delivery_confirm.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "e556a106010cae9102e46bad508eef1e7b1cc32b63a0ea789cb468d72701057a",
+      "output_sha256": "badd20c555ff317fc3bbd139854cd6408e522f7f713d658815bc472f5605ba09"
+    },
+    {
+      "source": "benign/mild_annoyance_unrelated_to_fraud.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "a30c9f039c76f7e96439c0224a1b332c9d2ca3a4d4721679ac80192d7ffc5f36",
+      "output_sha256": "ac0b13159a2c118799545a5d1da43710839dc8c70ae0c2b993996926b6795207"
+    },
+    {
+      "source": "benign/ordinary_customer_service_order_status.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "524745a5961866f74a5efdfae8870f8ae26a3b8271b7c1c208ec6ed186bd9b27",
+      "output_sha256": "98d5882edbe0b61e906c8af72c852baef788c6fa1340ed42b19d8b63a680c29e"
+    },
+    {
+      "source": "benign/slow_elderly_relative_call.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "00580932515ee9b59de7816cdc44b7e568a043e5b4b3c4bc1e90a16889dc16b0",
+      "output_sha256": "739ce121fe293e8c5bf8a5bed410d84617fe2227710050532b1fa99fb79518a8"
+    },
+    {
+      "source": "benign/workplace_meeting_scheduling.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "90dcf9d87515cebd78033f188d599f626f2119624a7ad6fc3e190986a0a2f03d",
+      "output_sha256": "22ab5b60eb595f23c9788c674ea495a1ea2af8307d83394810bd13bd8d799d50"
+    },
+    {
+      "source": "scam/bank_otp_request.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "097dcb1330b7538bfe750721fa38d83a8af6358db8935d0b6f284b66d97c36dd",
+      "output_sha256": "2bbe8e6aa0603a718c25e18d9348ace71bd3d26cddd2d6d7f64d7525f5d37a36"
+    },
+    {
+      "source": "scam/courier_customs_package_scam.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "1274ccf3424633d6b63103423fa8745bfa9befa99e325279dc969c27f91197c9",
+      "output_sha256": "cbfecc40e6b556a2725c8f8868a8bcc50bce8cbe673797a11acc238ddb984375"
+    },
+    {
+      "source": "scam/crypto_investment_scam.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "e5bbb7c754dfd6abaa8fe9ba657961442f5dd67d8f04bd30375cc296addeba43",
+      "output_sha256": "24d34925a70214367780e811e65f72ce57555b3945c01395a264fd3391ac04ba"
+    },
+    {
+      "source": "scam/fake_credit_card_suspension.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "64881ad653a71c7d538b4b69286d3fe4a7e825169c8556dd613c1edb1e58ba4f",
+      "output_sha256": "1a3aab5e481b4504aed0d0e065d790f6ba188e1ff4cdd48cca22c86965586d4d"
+    },
+    {
+      "source": "scam/fake_debt_collection_threat.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "5696489519c18e0668bd64af8a6799c766cf6f23aafd61d38f6d2c5133336843",
+      "output_sha256": "792bdac0379e480b91f33434a333163f76760bb2684997633aa962eedc3940a1"
+    },
+    {
+      "source": "scam/fake_health_insurance_notice.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "e3ad96f8d29f25f6c4518b627551d931b7cab0ea7e5f2a05affd8bc43b8b52c9",
+      "output_sha256": "8a978e6e338e8f6117e05934c524a84c7a830f15333b163419f115288dab598e"
+    },
+    {
+      "source": "scam/fake_job_recruitment_scam.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "96d0959bb49a7eb127b674ed269d6da6e9a76e3fbfd5c683803b2fc913124933",
+      "output_sha256": "d80ff2c1d7e868728a057fbd3f15511afea6a97078d16b90af1b758398a3d696"
+    },
+    {
+      "source": "scam/fake_kidnapping_emergency.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "40947f8a20234d982c0aad21ce60b1f828039acfa1fed91f57097a2c3105d690",
+      "output_sha256": "b86b18a47c2fb2f469cf2d756c811ec2480dc0a7a4e98a33336288d0562304de"
+    },
+    {
+      "source": "scam/fake_prosecutor_investigation.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "c0464c778f71154a87ba2ce314f089560bcc2ec56fb576e936f8191be1be61af",
+      "output_sha256": "7ffb5771a4e781ca127e6a05ae3f3af794554b1cf4860528db62ad596be122c0"
+    },
+    {
+      "source": "scam/online_shopping_refund_scam.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "b32eb77e7d073ea129e522d079fab666be42e09d51e0688f97165a9f4cff3652",
+      "output_sha256": "5d2bd2609c297afdd20074d6d76edbbc984d4a79c6ae8861c4a387b920b8a0f2"
+    },
+    {
+      "source": "scam/romance_scam_gift_request.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "25e1035a3dd71b50b1f849286313aea3c6fa5319234e37a74cba0be2c3bb32e1",
+      "output_sha256": "8f0cd1291bfd6b3010f592e34a7d84bc18f953a9203656a693a7ad358a3bd87e"
+    },
+    {
+      "source": "scam/tech_support_virus_scam.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "0cce40abeecb047b6896e6a7f4121f55c75d4129b326c9f04db2480fa9ae1e93",
+      "output_sha256": "601ee14ef1d7963dc2c34120ed7eeebfd6724726f0cce6c97d5b9d3c0c62eb2a"
+    },
+    {
+      "source": "scam/utility_bill_overdue_scam.wav",
+      "profile": "g711_alaw",
+      "source_sha256": "2755624419c5d4186cabe9d8544256b6b1fc04f3a0ce3adf7735fdf4f147fdd6",
+      "output_sha256": "8c1e0a00948001b12c72d95f693b993f3ddd88b280c55bd474b59e8232553361"
+    }
+  ]
+}
