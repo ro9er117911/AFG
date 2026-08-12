@@ -1,0 +1,203 @@
+{
+  "provenance": {
+    "utc_time": "2026-08-12T04:00:59.103250+00:00",
+    "git_commit": "1c4078b31d87a0d9fc1391ec1a726ba3b526c4e1",
+    "git_worktree_clean": true,
+    "llm_provider": "claude_code",
+    "llm_model_alias": "claude-opus-5",
+    "llm_effort": "medium",
+    "line2_backend": "claude",
+    "asr_backend": "whisper",
+    "emotion_backend": "wavlm",
+    "claude_cli_version": "2.1.223 (Claude Code)",
+    "python": "3.11.10",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
+  },
+  "what_this_measures": "基準選擇的敏感度：改用第 1..K 個 chunk 當基準時，下游『相對基準變化率』的最大差距。這與 baseline_stability.py 測的『通話內自然波動』不同——後者是該檔的已知缺陷（見 PAPER.md §5.4 限制 (i)）。",
+  "max_baseline_candidates": 2,
+  "threshold": 0.2,
+  "summary": {
+    "mean_pitch": {
+      "n_clips": 4,
+      "median_spread": 0.0928,
+      "max_spread": 0.1427,
+      "unstable": false
+    },
+    "jitter_local": {
+      "n_clips": 4,
+      "median_spread": 0.1518,
+      "max_spread": 0.3114,
+      "unstable": false
+    },
+    "shimmer_local": {
+      "n_clips": 4,
+      "median_spread": 0.2107,
+      "max_spread": 0.3432,
+      "unstable": true
+    },
+    "hnr": {
+      "n_clips": 4,
+      "median_spread": 0.0926,
+      "max_spread": 0.1397,
+      "unstable": false
+    },
+    "pause_ratio": {
+      "n_clips": 3,
+      "median_spread": 0.3567,
+      "max_spread": 0.4166,
+      "unstable": true
+    }
+  },
+  "per_clip": [
+    {
+      "clip": "benign/dinner_chat.wav",
+      "n_chunks": 4,
+      "mean_pitch": {
+        "relative_change_by_baseline_choice": [
+          0.0406,
+          -0.0525
+        ],
+        "spread": 0.0931
+      },
+      "jitter_local": {
+        "relative_change_by_baseline_choice": [
+          0.1296,
+          -0.1818
+        ],
+        "spread": 0.3114
+      },
+      "shimmer_local": {
+        "relative_change_by_baseline_choice": [
+          0.1426,
+          -0.2006
+        ],
+        "spread": 0.3432
+      },
+      "hnr": {
+        "relative_change_by_baseline_choice": [
+          0.0031,
+          0.1427
+        ],
+        "spread": 0.1395
+      },
+      "pause_ratio": {
+        "relative_change_by_baseline_choice": [
+          0.8802,
+          1.2287
+        ],
+        "spread": 0.3485
+      }
+    },
+    {
+      "clip": "scam/fake_credit_card_suspension.wav",
+      "n_chunks": 4,
+      "mean_pitch": {
+        "relative_change_by_baseline_choice": [
+          -0.0746,
+          0.0179
+        ],
+        "spread": 0.0925
+      },
+      "jitter_local": {
+        "relative_change_by_baseline_choice": [
+          0.1052,
+          0.2674
+        ],
+        "spread": 0.1622
+      },
+      "shimmer_local": {
+        "relative_change_by_baseline_choice": [
+          0.0485,
+          0.2829
+        ],
+        "spread": 0.2344
+      },
+      "hnr": {
+        "relative_change_by_baseline_choice": [
+          -0.1132,
+          0.0264
+        ],
+        "spread": 0.1397
+      },
+      "pause_ratio": {
+        "relative_change_by_baseline_choice": [
+          -0.2365,
+          0.1203
+        ],
+        "spread": 0.3567
+      }
+    },
+    {
+      "clip": "scam/fake_prosecutor_investigation.wav",
+      "n_chunks": 4,
+      "mean_pitch": {
+        "relative_change_by_baseline_choice": [
+          0.0098,
+          -0.0317
+        ],
+        "spread": 0.0415
+      },
+      "jitter_local": {
+        "relative_change_by_baseline_choice": [
+          -0.0809,
+          0.0605
+        ],
+        "spread": 0.1414
+      },
+      "shimmer_local": {
+        "relative_change_by_baseline_choice": [
+          0.0434,
+          -0.0276
+        ],
+        "spread": 0.071
+      },
+      "hnr": {
+        "relative_change_by_baseline_choice": [
+          0.0821,
+          0.1089
+        ],
+        "spread": 0.0269
+      },
+      "pause_ratio": {
+        "relative_change_by_baseline_choice": [
+          -0.1968,
+          0.2198
+        ],
+        "spread": 0.4166
+      }
+    },
+    {
+      "clip": "scam/tech_support_virus_scam.wav",
+      "n_chunks": 4,
+      "mean_pitch": {
+        "relative_change_by_baseline_choice": [
+          -0.0431,
+          0.0996
+        ],
+        "spread": 0.1427
+      },
+      "jitter_local": {
+        "relative_change_by_baseline_choice": [
+          -0.0015,
+          -0.1105
+        ],
+        "spread": 0.109
+      },
+      "shimmer_local": {
+        "relative_change_by_baseline_choice": [
+          0.1185,
+          -0.0685
+        ],
+        "spread": 0.1871
+      },
+      "hnr": {
+        "relative_change_by_baseline_choice": [
+          0.0225,
+          0.0681
+        ],
+        "spread": 0.0456
+      }
+    }
+  ]
+}
