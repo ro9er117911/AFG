@@ -1,0 +1,18 @@
+{
+  "binary_classification/train.json": {
+    "records": 4000,
+    "audio_references": 4000
+  },
+  "binary_classification/test.json": {
+    "records": 400,
+    "audio_references": 400
+  },
+  "sft/train.jsonl": {
+    "records": 27146,
+    "audio_references": 27146
+  },
+  "sft/test.jsonl": {
+    "records": 6807,
+    "audio_references": 6807
+  }
+}
