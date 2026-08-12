@@ -7,3 +7,6 @@ antifraud_v3/data/
 .venv311/
 .omc/
 .pytest_cache/
+
+# 評測語料快取（12.7GB audio.zip 與解壓內容，不進版控）
+antifraud_v3/eval/teleantifraud_cache/

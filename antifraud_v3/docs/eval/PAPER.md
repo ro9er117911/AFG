@@ -210,8 +210,11 @@ fuse(fake_score: float, line2: AntiFraudQwenResult | None, threshold: float)
 
 ### 5.1 Q1：鑑別力 —— **未完成，且這是本文最大的缺口**
 
-需 TeleAntiFraud-28k 官方 test split（7,021 筆）。harness 已完成、
-指標經單元測試驗證（`eval/teleantifraud.py`），但**尚未執行**。
+需 TeleAntiFraud-28k 官方 test split（**400 筆**，fraud 200 / normal 200 完全平衡）。
+harness 已完成、指標經單元測試驗證（`eval/teleantifraud.py`），但**尚未執行**。
+
+（先前版本誤記為 7,021 筆——那是 sft split，實測 6,807，且非詐騙偵測任務。
+此為事實更正，方向是縮小樣本規模宣稱。）
 
 **必須誠實說明卡點的性質**：該資料集為 gated，但屬 **auto-approval**——
 只需登入 HuggingFace 帳號並同意分享聯絡資訊，非人工審核。

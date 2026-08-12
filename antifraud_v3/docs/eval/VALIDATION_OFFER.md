@@ -196,9 +196,13 @@ Nemesysco 自報 98%、獨立實測約 50%；英國 DWP 採用該技術的試辦
 
 **這個反駁是對的，我方接受。**
 
-TeleAntiFraud-28k（ACM MM 2025）可取得、有官方 test split（7,021 筆）、
-有明確 baseline（Fraud detection F1：base 58.51 → fine-tuned 84.78），
-且**完全不需要任何買方的資料**。取得方式為 auto-approval，是行政步驟而非實質障礙。
+TeleAntiFraud-28k（ACM MM 2025）可取得、有官方 test split（**400 筆**，
+fraud 200 / normal 200 完全平衡），且**完全不需要任何買方的資料**。
+取得方式為 auto-approval，是行政步驟而非實質障礙。
+
+該資料集有已發表的 baseline，但**我方不與之比較**：其 baseline 是在該資料集上
+微調過的端到端音訊模型，我方是 zero-shot 且需自行 ASR 產生逐字稿——
+受測系統形態不同，任何並排數字都會誤導。我方只報自己的 HTER / FRR / FAR。
 
 **我方尚未完成這項測試。** 評測程式已寫好並經單元測試驗證，但截至本文件日期未執行。
 

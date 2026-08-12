@@ -1,8 +1,14 @@
 """在 TeleAntiFraud-28k 官方 test split 上評測 Line 2 與融合層。
 
 這是評測協定的 Q1：在**有統計意義的樣本數**上量測鑑別力。現有自建語料只有 23 筆
-（PROTOCOL.md §4.3 明訂 n<100 不得以準確率語氣陳述結論），這個資料集的官方 test split
-有 7,021 筆，是目前唯一能讓 Q1 得到可信答案的來源。
+（PROTOCOL.md §4.3 明訂 n<100 不得以準確率語氣陳述結論），這個資料集的
+binary_classification test split 有 **400 筆**（fraud 200 / normal 200，完全平衡），
+是目前唯一能讓 Q1 得到可信答案的來源。
+
+（7,021 是先前的誤記——那是 sft split 的規模，實測為 6,807，且非詐騙偵測任務。）
+
+**受測對象是「ASR + Line 2」整條鏈路，不是 Line 2。** 該資料集三個 split 都
+沒有逐字稿（欄位僅 id/task/audio_path/instruction/label），文字必須由我方 ASR 產生。
 
 **這個資料集不能回答 Q2（電話頻寬）。** 論文確認全部音訊經 ChatTTS 重新合成，
 連源自真實通話的 DS1 部分也是匿名化後重新生成，且論文未載明取樣率或頻寬規格，
@@ -36,6 +42,8 @@ from .provenance import stamp
 REPO_ID = "JimmyMa99/TeleAntiFraud"
 CACHE_DIR = Path(__file__).parent / "teleantifraud_cache"
 RESULT_PATH = Path(__file__).parent / "teleantifraud_result.json"
+# audio.zip 解壓後的根目錄；parquet 的 audio_path 是相對於它的路徑
+AUDIO_ROOT = CACHE_DIR / "audio_extracted"
 
 
 @dataclass
@@ -124,9 +132,11 @@ def compute_metrics(trials: list[Trial]) -> dict:
 # ---------- 資料載入 ----------
 
 def prepare() -> int:
-    """下載官方 test split。刻意只抓 viewer/test.parquet 而非 12.7GB 的 audio.zip：
-    Line 2 的判定路徑吃的是逐字稿文字，音訊只在 qwen2audio 後端才需要。先用文字路徑
-    把 Q1 跑出來，音訊留到確定要測 qwen2audio 後端時再抓。"""
+    """下載官方 test split 的 metadata。
+
+    先前這裡的註解說「刻意不抓 audio.zip，因為 Line 2 吃的是逐字稿文字」——
+    **那個前提是錯的**：實測三個 split 都沒有逐字稿欄位（2026-08-12）。
+    音訊是必要的，12.7GB 的 audio.zip 需另外下載（見 --audio-root）。"""
     from huggingface_hub import hf_hub_download
 
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -148,10 +158,21 @@ def prepare() -> int:
     return 0
 
 
-def load_split(limit: int | None) -> list[dict]:
-    """從 parquet 讀出 (逐字稿, 標籤)。欄位名稱在實際拿到檔案前無法確定，
-    所以這裡對幾種常見命名做偵測，並在找不到時明確報錯而不是猜——猜錯會讓整份
-    評測的 ground truth 是錯的，那比跑不動嚴重得多。"""
+# 實測 schema（2026-08-12）：['id', 'task', 'audio_path', 'instruction', 'label']
+# **沒有逐字稿欄位**，文字必須由我方 ASR 從音訊產生。
+#
+# 這裡刻意寫死欄位名而非啟發式偵測。原本的偵測清單含 "prompt"，而
+# binary_classification 的 JSON 確實有 prompt 欄——但它是 nunique=1 的固定模板。
+# 若被選中，400 筆會拿到同一段模板文字，跑完得到一份看起來正常但完全無意義的結果。
+# 寫死是為了讓這種失敗不可能發生。
+LABEL_COL = "label"
+AUDIO_COL = "audio_path"
+FRAUD_LABELS = {"fraud"}
+BENIGN_LABELS = {"normal"}
+
+
+def load_split(limit: int | None, seed: int = 0) -> list[dict]:
+    """從 parquet 讀出 (音訊路徑, 標籤)。逐字稿由 ASR 在 run() 內產生。"""
     import pandas as pd
 
     path = CACHE_DIR / "viewer" / "test.parquet"
@@ -162,56 +183,122 @@ def load_split(limit: int | None) -> list[dict]:
     print(f"  欄位：{list(df.columns)}")
     print(f"  列數：{len(df):,}")
 
-    text_col = next((c for c in ["transcript", "text", "content", "conversation", "asr_text", "prompt"]
-                     if c in df.columns), None)
-    label_col = next((c for c in ["label", "is_fraud", "fraud", "category", "answer", "target"]
-                      if c in df.columns), None)
-    if text_col is None or label_col is None:
+    missing = {LABEL_COL, AUDIO_COL} - set(df.columns)
+    if missing:
         raise SystemExit(
-            f"無法自動辨識逐字稿/標籤欄位。實際欄位：{list(df.columns)}\n"
-            "請檢查後在 load_split() 明確指定——不猜，因為猜錯會讓 ground truth 整份是錯的。"
+            f"預期欄位不存在：{missing}。實際欄位：{list(df.columns)}\n"
+            "資料集 schema 已變動，請重新檢查後修正——不猜，因為猜錯會讓 ground truth 整份是錯的。"
         )
-    print(f"  逐字稿欄位={text_col}  標籤欄位={label_col}")
-    print(f"  標籤分布：{Counter(df[label_col]).most_common(6)}")
 
-    rows = []
-    for i, r in df.iterrows():
-        raw = r[label_col]
-        if isinstance(raw, str):
-            is_fraud = raw.strip().lower() in {"fraud", "1", "true", "yes", "詐騙"}
-        else:
-            is_fraud = bool(raw)
-        rows.append({"index": int(i), "text": str(r[text_col]), "label": is_fraud})
-        if limit and len(rows) >= limit:
-            break
-    return rows
+    labels = set(df[LABEL_COL].unique())
+    unknown = labels - FRAUD_LABELS - BENIGN_LABELS
+    if unknown:
+        raise SystemExit(f"出現未知標籤值 {unknown}，無法安全映射為二元 ground truth。")
+    print(f"  標籤分布：{Counter(df[LABEL_COL]).most_common()}")
+
+    # --limit 必須先打亂。parquet 的列序不保證與標籤獨立，依序取前 N 筆可能
+    # 抽到高度偏斜的子集，得到一個「準確率很高」的假象而白跑一整晚。
+    if limit:
+        df = df.sample(n=min(limit, len(df)), random_state=seed).sort_index()
+        print(f"  --limit {limit}：已用 seed={seed} 隨機取樣，"
+              f"取樣後分布 {Counter(df[LABEL_COL]).most_common()}")
+
+    return [
+        {"index": int(i), "audio": str(r[AUDIO_COL]), "label": r[LABEL_COL] in FRAUD_LABELS}
+        for i, r in df.iterrows()
+    ]
 
 
 # ---------- 執行 ----------
 
-def run(rows: list[dict]) -> dict:
+_asr_cache: dict[str, object] = {}
+
+
+def _transcribe(path: Path, model_size: str) -> str:
+    """評測專用轉寫器，不走 asr/transcribe.py。
+
+    生產路徑 `load_whisper_model()` 把模型固定在單一全域 singleton（寫死 "base"），
+    無法在同一個 process 內切換模型——而雙臂設計的**整個重點**就是切換模型。
+    這裡自行持有 cache；生產程式碼不因評測需求而改動。
+    """
+    import ctranslate2
+    from faster_whisper import WhisperModel
+
+    if model_size not in _asr_cache:
+        try:
+            has_cuda = ctranslate2.get_cuda_device_count() > 0
+        except Exception:
+            has_cuda = False
+        device, ct = ("cuda", "float16") if has_cuda else ("cpu", "int8")
+        print(f"  載入 Whisper {model_size}（{device}/{ct}）…", flush=True)
+        _asr_cache[model_size] = WhisperModel(model_size, device=device, compute_type=ct)
+
+    segments, _ = _asr_cache[model_size].transcribe(str(path), language="zh")
+    return "".join(s.text for s in segments).strip()
+
+
+def run(rows: list[dict], asr_model: str, resume_path: Path) -> dict:
+    """單一臂：用指定的 ASR 模型轉寫，再送 Line 2 判定。
+
+    逐筆 append 到 JSONL。400 筆 x 2 臂是數百次 LLM 呼叫加上 CPU 上的 ASR，
+    中途掛掉全部重跑的代價太高——續跑不是優化，是這個規模下的必要條件。
+    """
     from ..detectors.scam_semantic_llm import classify_call_via_llm
     from ..llm import get_llm_provider
+
+    done: dict[int, dict] = {}
+    if resume_path.exists():
+        for line in resume_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                d = json.loads(line)
+                done[d["index"]] = d
+        print(f"  續跑：已有 {len(done)} 筆，跳過")
 
     provider = get_llm_provider()
     trials: list[Trial] = []
     t0 = time.time()
+    n_new = 0
 
-    for n, row in enumerate(rows, 1):
-        try:
-            r = classify_call_via_llm(provider, row["text"])
-            trials.append(Trial(row["index"], row["label"], r.is_fraud, r.confidence, r.fraud_type_raw))
-        except Exception as e:
-            trials.append(Trial(row["index"], row["label"], False, 0.0, None, error=type(e).__name__))
-        if n % 10 == 0:
-            el = time.time() - t0
-            print(f"  {n}/{len(rows)}  ({el/n:.1f}s/筆，預估剩餘 {(len(rows)-n)*el/n/60:.0f} 分鐘)")
+    with resume_path.open("a", encoding="utf-8") as fh:
+        for n, row in enumerate(rows, 1):
+            if row["index"] in done:
+                d = done[row["index"]]
+                trials.append(Trial(d["index"], d["label"], d["predicted"], d["confidence"],
+                                    d.get("fraud_type"), error=d.get("error")))
+                continue
+
+            audio = AUDIO_ROOT / row["audio"]
+            try:
+                if not audio.exists():
+                    raise FileNotFoundError(str(audio))
+                text = _transcribe(audio, asr_model)
+                r = classify_call_via_llm(provider, text)
+                t = Trial(row["index"], row["label"], r.is_fraud, r.confidence, r.fraud_type_raw)
+                rec = {"index": t.index, "label": t.label, "predicted": t.predicted,
+                       "confidence": t.confidence, "fraud_type": t.fraud_type,
+                       "asr_chars": len(text), "error": None}
+            except Exception as e:
+                t = Trial(row["index"], row["label"], False, 0.0, None, error=type(e).__name__)
+                rec = {"index": t.index, "label": t.label, "predicted": False, "confidence": 0.0,
+                       "fraud_type": None, "asr_chars": 0,
+                       "error": f"{type(e).__name__}: {str(e)[:200]}"}
+
+            trials.append(t)
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            fh.flush()
+            n_new += 1
+
+            if n_new % 10 == 0:
+                el = time.time() - t0
+                rate = el / n_new
+                print(f"  [{asr_model}] {n}/{len(rows)}  ({rate:.1f}s/筆，"
+                      f"預估剩餘 {(len(rows)-n)*rate/60:.0f} 分鐘)", flush=True)
 
     return {
-        "provenance": stamp(),
         "dataset": REPO_ID,
-        "split": "official test",
-        "backend": "line2_claude_text",
+        "split": "binary_classification test (n=400, fraud 200 / normal 200)",
+        "system_under_test": f"Whisper {asr_model} (ASR) + Line 2 (zero-shot)",
+        "asr_model": asr_model,
         "metrics": compute_metrics(trials),
         "trials": [asdict(t) for t in trials],
     }
@@ -219,32 +306,70 @@ def run(rows: list[dict]) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--prepare", action="store_true", help="下載官方 test split")
-    ap.add_argument("--limit", type=int, default=None, help="限制筆數（每筆都是一次 LLM 呼叫）")
+    ap.add_argument("--prepare", action="store_true", help="下載官方 test split metadata")
+    ap.add_argument("--limit", type=int, default=None, help="限制筆數（隨機取樣，見 --seed）")
+    ap.add_argument("--seed", type=int, default=0, help="--limit 取樣用的亂數種子")
+    ap.add_argument("--asr", nargs="+", default=["base", "large-v3"],
+                    help="要跑的 ASR 臂。預設雙臂：base 與 large-v3，兩者之差即 ASR 造成的衰減")
     args = ap.parse_args()
 
     if args.prepare:
         return prepare()
 
-    rows = load_split(args.limit)
+    if not AUDIO_ROOT.exists():
+        print(f"找不到音訊目錄：{AUDIO_ROOT}")
+        print("該資料集沒有逐字稿，必須下載並解壓 audio.zip（12.7GB）後才能評測。")
+        return 1
+
+    rows = load_split(args.limit, args.seed)
     print(f"\n評測 {len(rows)} 筆（詐騙 {sum(r['label'] for r in rows)} / "
-          f"正常 {sum(not r['label'] for r in rows)}）\n")
+          f"正常 {sum(not r['label'] for r in rows)}），ASR 臂：{args.asr}\n")
 
-    result = run(rows)
-    m = result["metrics"]
+    arms = {}
+    for asr_model in args.asr:
+        print(f"\n--- 臂：Whisper {asr_model} ---")
+        arms[asr_model] = run(rows, asr_model, RESULT_PATH.with_suffix(f".{asr_model}.jsonl"))
 
-    print(f"\n{'='*54}")
-    print(f"已評分 {m['n_scored']}/{m['n_total']}（錯誤 {m['n_errors']}）")
-    print(f"  漏抓率 FAR : {m['FAR_missed_fraud']:.1%}  CI95 {m['FAR_ci95']}")
-    print(f"  誤報率 FRR : {m['FRR_false_alarm']:.1%}  CI95 {m['FRR_ci95']}")
-    print(f"  HTER       : {m['HTER']:.1%}")
-    print(f"  混淆矩陣   : {m['confusion']}")
-    print(f"\n  F1（fraud class） : {m['f1_fraud_class']:.4f}")
-    print(f"  F1（macro）       : {m['f1_macro']:.4f}")
-    print(f"  F1（weighted）    : {m['f1_weighted']:.4f}")
-    print(f"\n  {m['comparability_note']}")
+    print(f"\n{'='*60}")
+    for asr_model, result in arms.items():
+        m = result["metrics"]
+        print(f"\n[Whisper {asr_model}]  已評分 {m['n_scored']}/{m['n_total']}"
+              f"（錯誤 {m['n_errors']}）")
+        print(f"  漏抓率 FAR : {m['FAR_missed_fraud']:.1%}  CI95 {m['FAR_ci95']}")
+        print(f"  誤報率 FRR : {m['FRR_false_alarm']:.1%}  CI95 {m['FRR_ci95']}")
+        print(f"  HTER       : {m['HTER']:.1%}")
+        print(f"  混淆矩陣   : {m['confusion']}")
 
-    RESULT_PATH.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    # 雙臂之差就是 ASR 造成的衰減——這是本測試最有價值的產出，
+    # 因為它把「語意層失敗」與「ASR 失敗」分開了。
+    asr_delta = None
+    if len(arms) == 2:
+        (a, ra), (b, rb) = arms.items()
+        asr_delta = {
+            "arms": [a, b],
+            "HTER_delta": round(ra["metrics"]["HTER"] - rb["metrics"]["HTER"], 4),
+            "interpretation": (
+                f"HTER({a}) - HTER({b})。為正代表較弱的 ASR 拖累了整體表現，"
+                f"其量級即為 ASR 品質對本系統的敏感度。"
+            ),
+        }
+        print(f"\nASR 衰減：HTER({a}) - HTER({b}) = {asr_delta['HTER_delta']:+.1%}")
+
+    out = {
+        "provenance": stamp(),
+        "no_baseline_comparison": (
+            "本結果**不與該資料集已發表的 baseline（58.51 / 84.78）比較**。"
+            "其 baseline 為在該資料集上微調過的端到端音訊模型，我方為 zero-shot "
+            "且需自行 ASR 產生逐字稿——受測系統形態不同，並排數字會誤導。"
+        ),
+        "external_validity_limits": (
+            "全部為 ChatTTS 合成寬頻音訊、中國大陸詐騙情境。"
+            "本結果**不預測** 8kHz 電話頻寬表現，也不預測台灣場景表現。"
+        ),
+        "arms": arms,
+        "asr_degradation": asr_delta,
+    }
+    RESULT_PATH.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n完整結果：{RESULT_PATH}")
     return 0
 
