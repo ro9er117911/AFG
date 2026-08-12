@@ -334,8 +334,29 @@ Q5 的正確做法需要走完整 `chunk_worker` → `discriminate` → `call_st
 |---|---|
 | LLM temperature／seed 控制 | `ClaudeCodeProvider` 不支援。**未解** |
 | 模型版本 pin | `claude-opus-5` 為會漂移的別名。**未解** |
-| 第三方時間戳 | 本地 git 時間戳可由 `GIT_COMMITTER_DATE` 偽造。本協定提交後應推送至公開 remote 或 OSF 取得外部時間戳。**未解——本期應處理** |
+| 第三方時間戳 | **已處理**，見 §10.1 |
 
-第三項在 v1 被 REVIEW_LOG 第 11 項列為結構性問題。
-**它是本期唯一一個純行政、零技術難度就能解決的可信度缺口**，
-建議在跑任何 v2 結果之前完成。
+第三項在 v1 被 REVIEW_LOG 第 11 項列為結構性問題——
+本地 git 時間戳可由 `GIT_COMMITTER_DATE` 偽造，因此「協定早於結果」
+這件事在 v1 只有自證，沒有外部證據。
+
+### 10.1 本協定的外部時間戳（2026-08-12 取得）
+
+本協定隨 commit `8b2712a6` 推送至公開 remote
+`https://github.com/ro9er117911/AFG`（branch `evaluation-protocol`）。
+
+| 來源 | 時間 | 可否由本機偽造 |
+|---|---|---|
+| commit 的 `committer_date` | 2026-08-12T16:42:11Z | **可**——`GIT_COMMITTER_DATE` 即可改 |
+| **GitHub PushEvent `created_at`** | **2026-08-12T16:42:21Z** | **否**——由 GitHub 伺服器在收到推送時寫入 |
+
+**具證據力的是第二列。** 任何第三方可用
+`gh api repos/ro9er117911/AFG/events` 自行查核，不需聯絡我方。
+
+**此時間戳的效力範圍（不可誇大）**：它只證明「本協定的內容在該時刻之前即已存在」。
+它**不證明** v2 的任何結果晚於協定產生——本期結果尚未取得，
+待結果 commit 推送後，兩者的 GitHub 收訖時間差才構成完整的時序證據。
+
+**v1 的時序缺陷不因本次處理而消失**：v1 協定與其全部實驗在同一工作階段內完成，
+且未推送至任何公開 remote，因此 v1 的「協定早於結果」仍然只有自證。
+本次補的是 v2 的時序，不追溯 v1。
