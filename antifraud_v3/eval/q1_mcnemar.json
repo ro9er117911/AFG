@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "utc_time": "2026-08-12T17:37:57.688097+00:00",
-    "git_commit": "024adf34089d4d0b71e65e20d4681f19bd78abd9",
-    "git_worktree_clean": true,
+    "utc_time": "2026-08-12T19:02:07.020561+00:00",
+    "git_commit": "fbddcbe013860b4355d9ca4c3f1e3673bc71887f",
+    "git_worktree_clean": false,
     "llm_provider": "claude_code",
     "llm_model_alias": "claude-opus-5",
     "llm_effort": "medium",
@@ -16,27 +16,25 @@
   },
   "method": "精確 McNemar（二項檢定，雙尾）。用精確法而非卡方近似，因為不一致筆數小時卡方會高估顯著性。",
   "protocol_basis": "PROTOCOL_v2.md §4：配對設計一律用 McNemar，不得比較獨立 CI。",
-  "incomplete_arms": [
-    "medium"
-  ],
-  "incomplete_caveat": "下列臂尚未完成 400 筆：['medium']。配對檢定只用兩臂**都有**的樣本，故結果有效，但屬於部分執行的中途快照，n 較小、檢定力較低。最終論文數字須待該臂跑完後重跑本檔。",
+  "incomplete_arms": [],
+  "incomplete_caveat": null,
   "comparisons": [
     {
       "arm_a": "base",
       "arm_b": "medium",
-      "n_paired": 208,
-      "n_a_only_in_a": 192,
+      "n_paired": 400,
+      "n_a_only_in_a": 0,
       "n_a_only_in_b": 0,
       "table": {
-        "both_correct": 202,
+        "both_correct": 389,
         "a_correct_b_wrong": 0,
-        "a_wrong_b_correct": 0,
-        "both_wrong": 6
+        "a_wrong_b_correct": 1,
+        "both_wrong": 10
       },
-      "discordant": 0,
+      "discordant": 1,
       "p_value": 1.0,
       "significant_at_0.05": false,
-      "verdict": "兩臂在每一筆上的對錯完全相同——無任何差異可檢定。"
+      "verdict": "不顯著（p=1.000）。**不得宣稱兩臂有差異**，也不得用點估計之差敘述「衰減」。不一致筆數僅 1，這個解析度看不出差異。"
     }
   ]
 }

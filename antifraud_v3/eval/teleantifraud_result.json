@@ -1,7 +1,7 @@
 {
   "provenance": {
-    "utc_time": "2026-08-12T15:05:59.860150+00:00",
-    "git_commit": "5f5335192a3fc51d8c195d1e60d1cba908404773",
+    "utc_time": "2026-08-12T19:01:47.500459+00:00",
+    "git_commit": "fbddcbe013860b4355d9ca4c3f1e3673bc71887f",
     "git_worktree_clean": true,
     "llm_provider": "claude_code",
     "llm_model_alias": "claude-opus-5",
@@ -9,7 +9,7 @@
     "line2_backend": "claude",
     "asr_backend": "whisper",
     "emotion_backend": "wavlm",
-    "claude_cli_version": "2.1.223 (Claude Code)",
+    "claude_cli_version": "2.1.228 (Claude Code)",
     "python": "3.11.10",
     "platform": "macOS-26.6.1-arm64-arm-64bit",
     "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
@@ -17,40 +17,520 @@
   "no_baseline_comparison": "本結果**不與該資料集已發表的 baseline（58.51 / 84.78）比較**。其 baseline 為在該資料集上微調過的端到端音訊模型，我方為 zero-shot 且需自行 ASR 產生逐字稿——受測系統形態不同，並排數字會誤導。",
   "external_validity_limits": "全部為 ChatTTS 合成寬頻音訊、中國大陸詐騙情境。本結果**不預測** 8kHz 電話頻寬表現，也不預測台灣場景表現。",
   "arms": {
-    "base": {
+    "medium": {
       "dataset": "JimmyMa99/TeleAntiFraud",
       "split": "binary_classification test (n=400, fraud 200 / normal 200)",
-      "system_under_test": "Whisper base (ASR) + Line 2 (zero-shot)",
-      "asr_model": "base",
+      "system_under_test": "Whisper medium (ASR) + Line 2 (zero-shot)",
+      "asr_model": "medium",
       "metrics": {
-        "n_total": 6,
-        "n_scored": 6,
+        "n_total": 400,
+        "n_scored": 400,
         "n_errors": 0,
-        "n_fraud": 2,
-        "n_benign": 4,
+        "n_fraud": 200,
+        "n_benign": 200,
         "confusion": {
-          "tp": 2,
-          "fp": 0,
-          "fn": 0,
-          "tn": 4
+          "tp": 198,
+          "fp": 8,
+          "fn": 2,
+          "tn": 192
         },
-        "FAR_missed_fraud": 0.0,
-        "FRR_false_alarm": 0.0,
-        "HTER": 0.0,
+        "FAR_missed_fraud": 0.01,
+        "FRR_false_alarm": 0.04,
+        "HTER": 0.025,
         "FAR_ci95": [
-          0.0,
-          0.6576
+          0.0027,
+          0.0357
         ],
         "FRR_ci95": [
-          0.0,
-          0.4899
+          0.0204,
+          0.0769
         ],
-        "f1_fraud_class": 1.0,
-        "f1_macro": 1.0,
-        "f1_weighted": 1.0,
-        "comparability_note": "論文未載明其 F1 為 macro/micro/weighted，故上述任一數字與論文的 58.51 / 84.78 皆為『非嚴格可比』。主要指標請看 HTER 與 FRR/FAR。"
+        "f1_fraud_class": 0.9754,
+        "f1_macro": 0.975,
+        "f1_weighted": 0.975,
+        "comparability_note": "本結果不與該資料集已發表的 baseline 比較。對方為在該資料集上微調過的端到端音訊模型，我方為 zero-shot 且需自行 ASR 產生逐字稿——受測系統形態不同。主要指標為 HTER 與 FRR/FAR（定義無歧義）；F1 僅供技術參考。"
       },
       "trials": [
+        {
+          "index": 0,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 1,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 2,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 3,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.82,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 4,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "identity_theft",
+          "error": null
+        },
+        {
+          "index": 5,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.86,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 6,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.62,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 7,
+          "label": false,
+          "predicted": true,
+          "confidence": 0.62,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 8,
+          "label": false,
+          "predicted": true,
+          "confidence": 0.78,
+          "fraud_type": "phishing_fraud",
+          "error": null
+        },
+        {
+          "index": 9,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 10,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 11,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 12,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 13,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 14,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.98,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 15,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 16,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.62,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 17,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 18,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 19,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 20,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 21,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.85,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 22,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 23,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.85,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 24,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 25,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.85,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 26,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 27,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 28,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 29,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 30,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 31,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.78,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 32,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 33,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 34,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.85,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 35,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.9,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 36,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.97,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 37,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.88,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 38,
+          "label": false,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 39,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 40,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 41,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 42,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 43,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 44,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 45,
+          "label": false,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "phishing_fraud",
+          "error": null
+        },
+        {
+          "index": 46,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 47,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 48,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.85,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 49,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.62,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 50,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 51,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 52,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 53,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 54,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 55,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.9,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 56,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 57,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 58,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 59,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
         {
           "index": 60,
           "label": true,
@@ -60,7 +540,1079 @@
           "error": null
         },
         {
+          "index": 61,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 62,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 63,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 64,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.78,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 65,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 66,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 67,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 68,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 69,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 70,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 71,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 72,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 73,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 74,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 75,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 76,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 77,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 78,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 79,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 80,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 81,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 82,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 83,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 84,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 85,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 86,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 87,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 88,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.82,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 89,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.82,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 90,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 91,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 92,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 93,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 94,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 95,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 96,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 97,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 98,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 99,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 100,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 101,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 102,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 103,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 104,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 105,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.72,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 106,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 107,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 108,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 109,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 110,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 111,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 112,
+          "label": false,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "phishing_fraud",
+          "error": null
+        },
+        {
+          "index": 113,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.75,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 114,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 115,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 116,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 117,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 118,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 119,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 120,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 121,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 122,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 123,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.62,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 124,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 125,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 126,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.82,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 127,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 128,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 129,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 130,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 131,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.85,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
           "index": 132,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 133,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 134,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 135,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 136,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 137,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 138,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 139,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 140,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 141,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 142,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.86,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 143,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 144,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.97,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 145,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 146,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 147,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 148,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 149,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 150,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 151,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 152,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 153,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 154,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 155,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 156,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 157,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 158,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 159,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 160,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 161,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 162,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 163,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 164,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.72,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 165,
+          "label": true,
+          "predicted": false,
+          "confidence": 0.72,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 166,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.72,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 167,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 168,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 169,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.85,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 170,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 171,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.72,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 172,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 173,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 174,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 175,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 176,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 177,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 178,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 179,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 180,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 181,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.9,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 182,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 183,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 184,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 185,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 186,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 187,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 188,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.85,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 189,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 190,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 191,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 192,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 193,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.72,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 194,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 195,
           "label": false,
           "predicted": false,
           "confidence": 0.95,
@@ -76,27 +1628,1627 @@
           "error": null
         },
         {
-          "index": 246,
+          "index": 197,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 198,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 199,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.6,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 200,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 201,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 202,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 203,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 204,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 205,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 206,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 207,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 208,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 209,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.82,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 210,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 211,
           "label": true,
           "predicted": true,
           "confidence": 0.93,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 212,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.82,
+          "fraud_type": "identity_theft",
+          "error": null
+        },
+        {
+          "index": 213,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 214,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 215,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 216,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.85,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 217,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 218,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 219,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 220,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.8,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 221,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 222,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 223,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 224,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 225,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 226,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "identity_theft",
+          "error": null
+        },
+        {
+          "index": 227,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 228,
+          "label": false,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 229,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 230,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 231,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 232,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 233,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 234,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 235,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 236,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.88,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 237,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
           "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 238,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.9,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 239,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 240,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 241,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 242,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 243,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 244,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 245,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 246,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 247,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.88,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 248,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.88,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 249,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 250,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 251,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.85,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 252,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.72,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 253,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 254,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 255,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 256,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 257,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 258,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 259,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 260,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 261,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 262,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 263,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 264,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 265,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 266,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.72,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 267,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.85,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 268,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 269,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 270,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 271,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 272,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 273,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 274,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 275,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.85,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 276,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 277,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 278,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 279,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 280,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 281,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 282,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.82,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 283,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 284,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 285,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 286,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 287,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 288,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 289,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "identity_theft",
+          "error": null
+        },
+        {
+          "index": 290,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 291,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.87,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 292,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 293,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 294,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 295,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 296,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 297,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 298,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 299,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 300,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 301,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 302,
+          "label": false,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 303,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.72,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 304,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "identity_theft",
+          "error": null
+        },
+        {
+          "index": 305,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 306,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 307,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 308,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
           "error": null
         },
         {
           "index": 309,
           "label": false,
           "predicted": false,
-          "confidence": 0.94,
+          "confidence": 0.93,
           "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 310,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 311,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.85,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 312,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 313,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.6,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 314,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 315,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 316,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 317,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.58,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 318,
+          "label": false,
+          "predicted": true,
+          "confidence": 0.62,
+          "fraud_type": "phishing_fraud",
+          "error": null
+        },
+        {
+          "index": 319,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 320,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 321,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 322,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 323,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 324,
+          "label": true,
+          "predicted": false,
+          "confidence": 0.58,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 325,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 326,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 327,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 328,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 329,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.97,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 330,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 331,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.72,
+          "fraud_type": "identity_theft",
+          "error": null
+        },
+        {
+          "index": 332,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 333,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.85,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 334,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 335,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 336,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.9,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 337,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.82,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 338,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 339,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 340,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "customer_service_fraud",
           "error": null
         },
         {
           "index": 341,
           "label": false,
           "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 342,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.72,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 343,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 344,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.88,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 345,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 346,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 347,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 348,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.72,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 349,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.93,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 350,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 351,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 352,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 353,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.76,
+          "fraud_type": "identity_theft",
+          "error": null
+        },
+        {
+          "index": 354,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 355,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 356,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.92,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 357,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 358,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 359,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.78,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 360,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.82,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 361,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.9,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 362,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.72,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 363,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 364,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 365,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 366,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 367,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 368,
+          "label": false,
+          "predicted": false,
           "confidence": 0.94,
           "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 369,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.9,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 370,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 371,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.62,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 372,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.85,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 373,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 374,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 375,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 376,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 377,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 378,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "extortion_fraud",
+          "error": null
+        },
+        {
+          "index": 379,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.94,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 380,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 381,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.96,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 382,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.82,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 383,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 384,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 385,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 386,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.88,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 387,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 388,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.95,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 389,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 390,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 391,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.96,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 392,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 393,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 394,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 395,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 396,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.82,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 397,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.92,
+          "fraud_type": "investment_fraud",
+          "error": null
+        },
+        {
+          "index": 398,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.9,
+          "fraud_type": "banking_fraud",
+          "error": null
+        },
+        {
+          "index": 399,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.82,
+          "fraud_type": "investment_fraud",
           "error": null
         }
       ]

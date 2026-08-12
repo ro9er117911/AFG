@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "utc_time": "2026-08-12T16:07:32.709120+00:00",
-    "git_commit": "6186d0fb1689442e5ccbe4c45cba80b841caa4e6",
-    "git_worktree_clean": true,
+    "utc_time": "2026-08-12T19:02:09.250358+00:00",
+    "git_commit": "fbddcbe013860b4355d9ca4c3f1e3673bc71887f",
+    "git_worktree_clean": false,
     "llm_provider": "claude_code",
     "llm_model_alias": "claude-opus-5",
     "llm_effort": "medium",
@@ -54,7 +54,53 @@
         "f1_weighted": 0.9725,
         "comparability_note": "本結果不與該資料集已發表的 baseline 比較。對方為在該資料集上微調過的端到端音訊模型，我方為 zero-shot 且需自行 ASR 產生逐字稿——受測系統形態不同。主要指標為 HTER 與 FRR/FAR（定義無歧義）；F1 僅供技術參考。"
       }
+    },
+    "medium": {
+      "system_under_test": "Whisper medium (ASR) + Line 2 (zero-shot)",
+      "asr_health": {
+        "n": 400,
+        "median_chars": 218,
+        "min_chars": 28,
+        "n_empty": 0,
+        "n_under_20_chars": 0
+      },
+      "metrics": {
+        "n_total": 400,
+        "n_scored": 400,
+        "n_errors": 0,
+        "n_fraud": 200,
+        "n_benign": 200,
+        "confusion": {
+          "tp": 198,
+          "fp": 8,
+          "fn": 2,
+          "tn": 192
+        },
+        "FAR_missed_fraud": 0.01,
+        "FRR_false_alarm": 0.04,
+        "HTER": 0.025,
+        "FAR_ci95": [
+          0.0027,
+          0.0357
+        ],
+        "FRR_ci95": [
+          0.0204,
+          0.0769
+        ],
+        "f1_fraud_class": 0.9754,
+        "f1_macro": 0.975,
+        "f1_weighted": 0.975,
+        "comparability_note": "本結果不與該資料集已發表的 baseline 比較。對方為在該資料集上微調過的端到端音訊模型，我方為 zero-shot 且需自行 ASR 產生逐字稿——受測系統形態不同。主要指標為 HTER 與 FRR/FAR（定義無歧義）；F1 僅供技術參考。"
+      }
     }
   },
-  "asr_degradation": null
+  "asr_degradation": {
+    "weak_arm": "base",
+    "strong_arm": "medium",
+    "HTER_base_minus_medium": 0.0025,
+    "FRR_base_minus_medium": 0.005,
+    "FAR_base_minus_medium": 0.0,
+    "interpretation": "為正代表較弱的 ASR 拖累表現，其量級即 ASR 品質對本系統的敏感度。這是唯一一條不需要真人語料就能對電話頻寬說出點什麼的路徑：電話頻寬會使 ASR 更差，而此處已量到系統對 ASR 品質的敏感度。",
+    "paired_test_required": "本表僅為點估計之差。兩臂為同一批 400 筆音檔的配對設計，依 PROTOCOL_v2.md §4，宣稱差異顯著前必須跑 McNemar，不得比較獨立 CI。見 q1_mcnemar.py。"
+  }
 }
