@@ -1,7 +1,7 @@
 {
   "provenance": {
-    "utc_time": "2026-08-12T16:55:17.778831+00:00",
-    "git_commit": "dd58a8043821a070b97b2d15bf71725aebc99846",
+    "utc_time": "2026-08-12T17:37:57.688097+00:00",
+    "git_commit": "024adf34089d4d0b71e65e20d4681f19bd78abd9",
     "git_worktree_clean": true,
     "llm_provider": "claude_code",
     "llm_model_alias": "claude-opus-5",
@@ -24,14 +24,14 @@
     {
       "arm_a": "base",
       "arm_b": "medium",
-      "n_paired": 106,
-      "n_a_only_in_a": 294,
+      "n_paired": 208,
+      "n_a_only_in_a": 192,
       "n_a_only_in_b": 0,
       "table": {
-        "both_correct": 102,
+        "both_correct": 202,
         "a_correct_b_wrong": 0,
         "a_wrong_b_correct": 0,
-        "both_wrong": 4
+        "both_wrong": 6
       },
       "discordant": 0,
       "p_value": 1.0,
