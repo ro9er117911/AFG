@@ -1,0 +1,259 @@
+{
+  "provenance": {
+    "utc_time": "2026-08-12T15:09:02.039376+00:00",
+    "git_commit": "5f5335192a3fc51d8c195d1e60d1cba908404773",
+    "git_worktree_clean": true,
+    "llm_provider": "claude_code",
+    "llm_model_alias": "claude-opus-5",
+    "llm_effort": "medium",
+    "line2_backend": "claude",
+    "asr_backend": "whisper",
+    "emotion_backend": "wavlm",
+    "claude_cli_version": "2.1.223 (Claude Code)",
+    "python": "3.11.10",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
+  },
+  "what_this_is_not": "本分析使用我方產業估計值，**不是 TapPay 提供的實際參數**。結論的效力完全取決於這四個數字，其中 fraud_base_rate 的不確定性最大。本檔的用途是展示分析框架並找出結論對哪個參數最敏感，不是宣稱本系統在 TapPay 的營運環境中划算。",
+  "why_not_HTER": "HTER = (FRR + FAR) / 2 預設兩種錯誤等重。本分析顯示在漏報成本遠高於誤報成本時，最佳操作點的 FRR 與 FAR 差距極大，HTER 相同的兩個系統可以有完全不同的營運價值——故 HTER 適合作為技術指標，不適合作為決策指標。",
+  "scenarios": [
+    {
+      "scenario": {
+        "name": "baseline_estimate",
+        "daily_calls": 10000,
+        "fraud_base_rate": 0.005,
+        "cost_false_alarm": 50,
+        "cost_missed_fraud": 200000,
+        "max_daily_alerts": 200,
+        "intervention_efficacy": 0.5,
+        "source": "我方估計值，非 TapPay 提供；fraud_base_rate 與 intervention_efficacy 不確定性最大"
+      },
+      "by_capability": [
+        {
+          "capability_c": 0.02,
+          "implied_HTER": 0.01,
+          "n_operating_points": 51,
+          "n_feasible": 38,
+          "is_empty_set": false,
+          "best_operating_point": {
+            "FRR": 0.0148,
+            "FAR": 0.0052,
+            "HTER": 0.01,
+            "daily_false_alarms": 147.3,
+            "daily_caught": 49.7,
+            "daily_missed": 0.3,
+            "daily_alerts": 197.0,
+            "within_staffing": true,
+            "daily_net_benefit": 4966637.0,
+            "net_positive": true
+          },
+          "max_tolerable_FRR": 0.0148
+        },
+        {
+          "capability_c": 0.05,
+          "implied_HTER": 0.025,
+          "n_operating_points": 51,
+          "n_feasible": 16,
+          "is_empty_set": false,
+          "best_operating_point": {
+            "FRR": 0.015,
+            "FAR": 0.035,
+            "HTER": 0.025,
+            "daily_false_alarms": 149.3,
+            "daily_caught": 48.2,
+            "daily_missed": 1.7,
+            "daily_alerts": 197.5,
+            "within_staffing": true,
+            "daily_net_benefit": 4817538.0,
+            "net_positive": true
+          },
+          "max_tolerable_FRR": 0.015
+        },
+        {
+          "capability_c": 0.1,
+          "implied_HTER": 0.05,
+          "n_operating_points": 51,
+          "n_feasible": 8,
+          "is_empty_set": false,
+          "best_operating_point": {
+            "FRR": 0.014,
+            "FAR": 0.086,
+            "HTER": 0.05,
+            "daily_false_alarms": 139.3,
+            "daily_caught": 45.7,
+            "daily_missed": 4.3,
+            "daily_alerts": 185.0,
+            "within_staffing": true,
+            "daily_net_benefit": 4563035.0,
+            "net_positive": true
+          },
+          "max_tolerable_FRR": 0.014
+        },
+        {
+          "capability_c": 0.2,
+          "implied_HTER": 0.1,
+          "n_operating_points": 51,
+          "n_feasible": 5,
+          "is_empty_set": false,
+          "best_operating_point": {
+            "FRR": 0.016,
+            "FAR": 0.184,
+            "HTER": 0.1,
+            "daily_false_alarms": 159.2,
+            "daily_caught": 40.8,
+            "daily_missed": 9.2,
+            "daily_alerts": 200.0,
+            "within_staffing": true,
+            "daily_net_benefit": 4072040.0,
+            "net_positive": true
+          },
+          "max_tolerable_FRR": 0.016
+        },
+        {
+          "capability_c": 0.3,
+          "implied_HTER": 0.15,
+          "n_operating_points": 51,
+          "n_feasible": 3,
+          "is_empty_set": false,
+          "best_operating_point": {
+            "FRR": 0.012,
+            "FAR": 0.288,
+            "HTER": 0.15,
+            "daily_false_alarms": 119.4,
+            "daily_caught": 35.6,
+            "daily_missed": 14.4,
+            "daily_alerts": 155.0,
+            "within_staffing": true,
+            "daily_net_benefit": 3554030.0,
+            "net_positive": true
+          },
+          "max_tolerable_FRR": 0.012
+        },
+        {
+          "capability_c": 0.5,
+          "implied_HTER": 0.25,
+          "n_operating_points": 51,
+          "n_feasible": 2,
+          "is_empty_set": false,
+          "best_operating_point": {
+            "FRR": 0.01,
+            "FAR": 0.49,
+            "HTER": 0.25,
+            "daily_false_alarms": 99.5,
+            "daily_caught": 25.5,
+            "daily_missed": 24.5,
+            "daily_alerts": 125.0,
+            "within_staffing": true,
+            "daily_net_benefit": 2545025.0,
+            "net_positive": true
+          },
+          "max_tolerable_FRR": 0.01
+        }
+      ],
+      "sensitivity": {
+        "fraud_base_rate": [
+          {
+            "fraud_base_rate": 0.001,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 808008.0
+          },
+          {
+            "fraud_base_rate": 0.002,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 1624016.0
+          },
+          {
+            "fraud_base_rate": 0.005,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 4072040.0
+          },
+          {
+            "fraud_base_rate": 0.01,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.008,
+            "best_net_benefit": 8076040.0
+          },
+          {
+            "fraud_base_rate": 0.02,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.0,
+            "best_net_benefit": 16000000.0
+          },
+          {
+            "fraud_base_rate": 0.05,
+            "is_empty_set": true,
+            "max_tolerable_FRR": null,
+            "best_net_benefit": null
+          }
+        ],
+        "intervention_efficacy": [
+          {
+            "intervention_efficacy": 0.1,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 808040.0
+          },
+          {
+            "intervention_efficacy": 0.25,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 2032040.0
+          },
+          {
+            "intervention_efficacy": 0.5,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 4072040.0
+          },
+          {
+            "intervention_efficacy": 0.75,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 6112040.0
+          },
+          {
+            "intervention_efficacy": 1.0,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 8152040.0
+          }
+        ],
+        "cost_missed_fraud": [
+          {
+            "cost_missed_fraud": 20000,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 400040.0
+          },
+          {
+            "cost_missed_fraud": 50000,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 1012040.0
+          },
+          {
+            "cost_missed_fraud": 100000,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 2032040.0
+          },
+          {
+            "cost_missed_fraud": 200000,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 4072040.0
+          },
+          {
+            "cost_missed_fraud": 500000,
+            "is_empty_set": false,
+            "max_tolerable_FRR": 0.016,
+            "best_net_benefit": 10192040.0
+          }
+        ]
+      }
+    }
+  ]
+}
