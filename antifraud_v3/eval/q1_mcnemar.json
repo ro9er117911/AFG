@@ -1,0 +1,42 @@
+{
+  "provenance": {
+    "utc_time": "2026-08-12T16:55:17.778831+00:00",
+    "git_commit": "dd58a8043821a070b97b2d15bf71725aebc99846",
+    "git_worktree_clean": true,
+    "llm_provider": "claude_code",
+    "llm_model_alias": "claude-opus-5",
+    "llm_effort": "medium",
+    "line2_backend": "claude",
+    "asr_backend": "whisper",
+    "emotion_backend": "wavlm",
+    "claude_cli_version": "2.1.228 (Claude Code)",
+    "python": "3.11.10",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
+  },
+  "method": "精確 McNemar（二項檢定，雙尾）。用精確法而非卡方近似，因為不一致筆數小時卡方會高估顯著性。",
+  "protocol_basis": "PROTOCOL_v2.md §4：配對設計一律用 McNemar，不得比較獨立 CI。",
+  "incomplete_arms": [
+    "medium"
+  ],
+  "incomplete_caveat": "下列臂尚未完成 400 筆：['medium']。配對檢定只用兩臂**都有**的樣本，故結果有效，但屬於部分執行的中途快照，n 較小、檢定力較低。最終論文數字須待該臂跑完後重跑本檔。",
+  "comparisons": [
+    {
+      "arm_a": "base",
+      "arm_b": "medium",
+      "n_paired": 106,
+      "n_a_only_in_a": 294,
+      "n_a_only_in_b": 0,
+      "table": {
+        "both_correct": 102,
+        "a_correct_b_wrong": 0,
+        "a_wrong_b_correct": 0,
+        "both_wrong": 4
+      },
+      "discordant": 0,
+      "p_value": 1.0,
+      "significant_at_0.05": false,
+      "verdict": "兩臂在每一筆上的對錯完全相同——無任何差異可檢定。"
+    }
+  ]
+}
