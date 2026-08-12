@@ -1,4 +1,20 @@
 {
+  "provenance": {
+    "utc_time": "2026-08-12T15:12:44.076072+00:00",
+    "git_commit": "8554ab5dccd19c6d40b4974892734bd82012bc14",
+    "git_worktree_clean": false,
+    "llm_provider": "claude_code",
+    "llm_model_alias": "claude-opus-5",
+    "llm_effort": "medium",
+    "line2_backend": "claude",
+    "asr_backend": "whisper",
+    "emotion_backend": "wavlm",
+    "claude_cli_version": "2.1.223 (Claude Code)",
+    "python": "3.11.10",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
+  },
+  "superseded_by": "baseline_sensitivity.py。本檔測的是『通話內自然波動』，而 §5.4 要問的是『基準選擇的敏感度』——兩者不等價，見該檔說明。",
   "threshold": 0.2,
   "summary": {
     "mean_pitch": {

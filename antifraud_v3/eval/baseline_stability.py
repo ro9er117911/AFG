@@ -27,6 +27,8 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+from .provenance import stamp
+
 from ..audio.features import extract_acoustic_features
 from ..audio.vad import VADChunker
 
@@ -109,7 +111,16 @@ def analyze() -> dict:
             "n_clips": len(cvs),
             "unstable": median_cv > CV_UNSTABLE_THRESHOLD,
         }
-    return {"threshold": CV_UNSTABLE_THRESHOLD, "summary": summary, "per_clip": clips}
+    return {
+        "provenance": stamp(),
+        "superseded_by": (
+            "baseline_sensitivity.py。本檔測的是『通話內自然波動』，"
+            "而 §5.4 要問的是『基準選擇的敏感度』——兩者不等價，見該檔說明。"
+        ),
+        "threshold": CV_UNSTABLE_THRESHOLD,
+        "summary": summary,
+        "per_clip": clips,
+    }
 
 
 def main() -> int:

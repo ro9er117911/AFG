@@ -122,9 +122,15 @@ def compute_metrics(trials: list[Trial]) -> dict:
         "f1_fraud_class": round(f1_fraud, 4),
         "f1_macro": round((f1_fraud + f1_benign) / 2, 4),
         "f1_weighted": round((f1_fraud * support_f + f1_benign * support_b) / total, 4) if total else None,
+        # F1 只作為技術參考輸出，**不用於任何對外比較**。
+        # 先前這裡寫的是「論文未載明 F1 種類，故非嚴格可比」——那個理由抓錯重點：
+        # 本 split 為 200/200 完全平衡，macro/micro/weighted 差距其實很小，
+        # F1 定義是三個問題裡最不嚴重的一個。真正的斷裂是 zero-shot vs fine-tuned，
+        # 那是**結構性**差距，不是定義差距，加再多 caveat 也無法讓兩個數字並排成立。
         "comparability_note": (
-            "論文未載明其 F1 為 macro/micro/weighted，故上述任一數字與論文的 "
-            "58.51 / 84.78 皆為『非嚴格可比』。主要指標請看 HTER 與 FRR/FAR。"
+            "本結果不與該資料集已發表的 baseline 比較。對方為在該資料集上微調過的"
+            "端到端音訊模型，我方為 zero-shot 且需自行 ASR 產生逐字稿——受測系統形態不同。"
+            "主要指標為 HTER 與 FRR/FAR（定義無歧義）；F1 僅供技術參考。"
         ),
     }
 
