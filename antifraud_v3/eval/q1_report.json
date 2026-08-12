@@ -1,0 +1,60 @@
+{
+  "provenance": {
+    "utc_time": "2026-08-12T16:07:32.709120+00:00",
+    "git_commit": "6186d0fb1689442e5ccbe4c45cba80b841caa4e6",
+    "git_worktree_clean": true,
+    "llm_provider": "claude_code",
+    "llm_model_alias": "claude-opus-5",
+    "llm_effort": "medium",
+    "line2_backend": "claude",
+    "asr_backend": "whisper",
+    "emotion_backend": "wavlm",
+    "claude_cli_version": "2.1.228 (Claude Code)",
+    "python": "3.11.10",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
+  },
+  "no_baseline_comparison": "不與該資料集已發表的 baseline 比較：對方為在該資料集上微調過的端到端音訊模型，我方為 zero-shot 且自行 ASR——受測系統形態不同。",
+  "external_validity_limits": "全部為 ChatTTS 合成寬頻音訊、中國大陸詐騙情境、zero-shot。**不預測** 8kHz 電話頻寬表現，也**不預測**台灣場景表現。條件在多數維度上皆比實際部署差，故若表現可用，是一個下限估計；反之不成立。",
+  "arms": {
+    "base": {
+      "system_under_test": "Whisper base (ASR) + Line 2 (zero-shot)",
+      "asr_health": {
+        "n": 400,
+        "median_chars": 208,
+        "min_chars": 30,
+        "n_empty": 0,
+        "n_under_20_chars": 0
+      },
+      "metrics": {
+        "n_total": 400,
+        "n_scored": 400,
+        "n_errors": 0,
+        "n_fraud": 200,
+        "n_benign": 200,
+        "confusion": {
+          "tp": 198,
+          "fp": 9,
+          "fn": 2,
+          "tn": 191
+        },
+        "FAR_missed_fraud": 0.01,
+        "FRR_false_alarm": 0.045,
+        "HTER": 0.0275,
+        "FAR_ci95": [
+          0.0027,
+          0.0357
+        ],
+        "FRR_ci95": [
+          0.0239,
+          0.0833
+        ],
+        "f1_fraud_class": 0.973,
+        "f1_macro": 0.9725,
+        "f1_weighted": 0.9725,
+        "comparability_note": "本結果不與該資料集已發表的 baseline 比較。對方為在該資料集上微調過的端到端音訊模型，我方為 zero-shot 且需自行 ASR 產生逐字稿——受測系統形態不同。主要指標為 HTER 與 FRR/FAR（定義無歧義）；F1 僅供技術參考。"
+      }
+    }
+  },
+  "asr_degradation": null
+}

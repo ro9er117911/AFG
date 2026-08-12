@@ -1,0 +1,106 @@
+{
+  "provenance": {
+    "utc_time": "2026-08-12T15:05:59.860150+00:00",
+    "git_commit": "5f5335192a3fc51d8c195d1e60d1cba908404773",
+    "git_worktree_clean": true,
+    "llm_provider": "claude_code",
+    "llm_model_alias": "claude-opus-5",
+    "llm_effort": "medium",
+    "line2_backend": "claude",
+    "asr_backend": "whisper",
+    "emotion_backend": "wavlm",
+    "claude_cli_version": "2.1.223 (Claude Code)",
+    "python": "3.11.10",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
+  },
+  "no_baseline_comparison": "本結果**不與該資料集已發表的 baseline（58.51 / 84.78）比較**。其 baseline 為在該資料集上微調過的端到端音訊模型，我方為 zero-shot 且需自行 ASR 產生逐字稿——受測系統形態不同，並排數字會誤導。",
+  "external_validity_limits": "全部為 ChatTTS 合成寬頻音訊、中國大陸詐騙情境。本結果**不預測** 8kHz 電話頻寬表現，也不預測台灣場景表現。",
+  "arms": {
+    "base": {
+      "dataset": "JimmyMa99/TeleAntiFraud",
+      "split": "binary_classification test (n=400, fraud 200 / normal 200)",
+      "system_under_test": "Whisper base (ASR) + Line 2 (zero-shot)",
+      "asr_model": "base",
+      "metrics": {
+        "n_total": 6,
+        "n_scored": 6,
+        "n_errors": 0,
+        "n_fraud": 2,
+        "n_benign": 4,
+        "confusion": {
+          "tp": 2,
+          "fp": 0,
+          "fn": 0,
+          "tn": 4
+        },
+        "FAR_missed_fraud": 0.0,
+        "FRR_false_alarm": 0.0,
+        "HTER": 0.0,
+        "FAR_ci95": [
+          0.0,
+          0.6576
+        ],
+        "FRR_ci95": [
+          0.0,
+          0.4899
+        ],
+        "f1_fraud_class": 1.0,
+        "f1_macro": 1.0,
+        "f1_weighted": 1.0,
+        "comparability_note": "論文未載明其 F1 為 macro/micro/weighted，故上述任一數字與論文的 58.51 / 84.78 皆為『非嚴格可比』。主要指標請看 HTER 與 FRR/FAR。"
+      },
+      "trials": [
+        {
+          "index": 60,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "customer_service_fraud",
+          "error": null
+        },
+        {
+          "index": 132,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 196,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.95,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 246,
+          "label": true,
+          "predicted": true,
+          "confidence": 0.93,
+          "fraud_type": "lottery_fraud",
+          "error": null
+        },
+        {
+          "index": 309,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        },
+        {
+          "index": 341,
+          "label": false,
+          "predicted": false,
+          "confidence": 0.94,
+          "fraud_type": null,
+          "error": null
+        }
+      ]
+    }
+  },
+  "asr_degradation": null
+}
