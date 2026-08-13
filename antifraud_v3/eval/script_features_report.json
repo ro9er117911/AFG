@@ -1,7 +1,7 @@
 {
   "provenance": {
-    "utc_time": "2026-08-13T06:06:36.880698+00:00",
-    "git_commit": "e8708d8d7aef4aab94710e44329a7771d3b2422e",
+    "utc_time": "2026-08-13T09:39:03.067507+00:00",
+    "git_commit": "fa51ff85ec91d51eae8e6b935c4c2b0b52e747c0",
     "git_worktree_clean": false,
     "llm_provider": "claude_code",
     "llm_model_alias": "claude-opus-5",
@@ -15,146 +15,146 @@
     "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
   },
   "scope_note": "本報表測替代特徵集的『可及性與鑑別方向』，不測判定準確率——這組特徵沒有任何資料集提供 ground truth（本專案自訂），準確率不可計算，亦不宣稱。沿用 pattern_behavior.py 的立場。",
-  "completeness": "**部分執行（234/400）**",
-  "partial_run_caveat": "僅完成 234/400 筆，且語料未打亂——前段樣本的難度與標籤比例都和整體不同（見 memory: 語料順序陷阱）。本數字**不可與完整執行的結果比較**，也不得對外引用。",
-  "n_total_rows": 234,
-  "n_scored": 234,
-  "n_scam": 115,
-  "n_benign": 119,
+  "completeness": "完整",
+  "partial_run_caveat": null,
+  "n_total_rows": 400,
+  "n_scored": 400,
+  "n_scam": 200,
+  "n_benign": 200,
   "A1_A2_per_feature": {
     "authority_impersonation": {
       "zh": "冒充權威身份",
-      "scam_n": 99,
-      "scam_total": 115,
-      "scam_rate": 0.8609,
+      "scam_n": 169,
+      "scam_total": 200,
+      "scam_rate": 0.845,
       "scam_ci95": [
-        0.7859,
-        0.9125
+        0.7884,
+        0.8886
       ],
-      "benign_n": 13,
-      "benign_total": 119,
-      "benign_rate": 0.1092,
+      "benign_n": 18,
+      "benign_total": 200,
+      "benign_rate": 0.09,
       "benign_ci95": [
-        0.065,
-        0.178
+        0.0577,
+        0.1378
       ]
     },
     "urgency_pressure": {
       "zh": "製造時間壓力",
-      "scam_n": 58,
-      "scam_total": 115,
-      "scam_rate": 0.5043,
+      "scam_n": 107,
+      "scam_total": 200,
+      "scam_rate": 0.535,
       "scam_ci95": [
-        0.4143,
-        0.5941
+        0.4659,
+        0.6028
       ],
-      "benign_n": 7,
-      "benign_total": 119,
-      "benign_rate": 0.0588,
+      "benign_n": 11,
+      "benign_total": 200,
+      "benign_rate": 0.055,
       "benign_ci95": [
-        0.0288,
-        0.1165
+        0.031,
+        0.0958
       ]
     },
     "isolation_attempt": {
       "zh": "阻止求證",
-      "scam_n": 7,
-      "scam_total": 115,
-      "scam_rate": 0.0609,
+      "scam_n": 13,
+      "scam_total": 200,
+      "scam_rate": 0.065,
       "scam_ci95": [
-        0.0298,
-        0.1203
+        0.0384,
+        0.108
       ],
       "benign_n": 0,
-      "benign_total": 119,
+      "benign_total": 200,
       "benign_rate": 0.0,
       "benign_ci95": [
         0.0,
-        0.0313
+        0.0188
       ]
     },
     "credential_request": {
       "zh": "索取憑證",
-      "scam_n": 48,
-      "scam_total": 115,
-      "scam_rate": 0.4174,
+      "scam_n": 85,
+      "scam_total": 200,
+      "scam_rate": 0.425,
       "scam_ci95": [
-        0.3314,
-        0.5088
+        0.3585,
+        0.4943
       ],
-      "benign_n": 1,
-      "benign_total": 119,
-      "benign_rate": 0.0084,
+      "benign_n": 2,
+      "benign_total": 200,
+      "benign_rate": 0.01,
       "benign_ci95": [
-        0.0015,
-        0.0461
+        0.0027,
+        0.0357
       ]
     },
     "irregular_payment": {
       "zh": "要求非常規金流",
-      "scam_n": 25,
-      "scam_total": 115,
-      "scam_rate": 0.2174,
+      "scam_n": 38,
+      "scam_total": 200,
+      "scam_rate": 0.19,
       "scam_ci95": [
-        0.1518,
-        0.3012
+        0.1417,
+        0.25
       ],
       "benign_n": 1,
-      "benign_total": 119,
-      "benign_rate": 0.0084,
+      "benign_total": 200,
+      "benign_rate": 0.005,
       "benign_ci95": [
-        0.0015,
-        0.0461
+        0.0009,
+        0.0278
       ]
     },
     "remote_control_request": {
       "zh": "要求遠端操作",
-      "scam_n": 2,
-      "scam_total": 115,
-      "scam_rate": 0.0174,
+      "scam_n": 3,
+      "scam_total": 200,
+      "scam_rate": 0.015,
       "scam_ci95": [
-        0.0048,
-        0.0612
+        0.0051,
+        0.0432
       ],
-      "benign_n": 5,
-      "benign_total": 119,
-      "benign_rate": 0.042,
+      "benign_n": 7,
+      "benign_total": 200,
+      "benign_rate": 0.035,
       "benign_ci95": [
-        0.0181,
-        0.0946
+        0.0171,
+        0.0705
       ]
     },
     "pretext_of_problem": {
       "zh": "虛構待解決問題",
-      "scam_n": 84,
-      "scam_total": 115,
-      "scam_rate": 0.7304,
+      "scam_n": 145,
+      "scam_total": 200,
+      "scam_rate": 0.725,
       "scam_ci95": [
-        0.6429,
-        0.8031
+        0.6593,
+        0.7822
       ],
-      "benign_n": 2,
-      "benign_total": 119,
-      "benign_rate": 0.0168,
+      "benign_n": 4,
+      "benign_total": 200,
+      "benign_rate": 0.02,
       "benign_ci95": [
-        0.0046,
-        0.0592
+        0.0078,
+        0.0503
       ]
     },
     "reward_baiting": {
       "zh": "利益誘餌",
-      "scam_n": 33,
-      "scam_total": 115,
-      "scam_rate": 0.287,
+      "scam_n": 56,
+      "scam_total": 200,
+      "scam_rate": 0.28,
       "scam_ci95": [
-        0.2122,
-        0.3755
+        0.2224,
+        0.3459
       ],
-      "benign_n": 13,
-      "benign_total": 119,
-      "benign_rate": 0.1092,
+      "benign_n": 25,
+      "benign_total": 200,
+      "benign_rate": 0.125,
       "benign_ci95": [
-        0.065,
+        0.0861,
         0.178
       ]
     }
@@ -163,30 +163,31 @@
   "A2_ci_separated_features": [
     "authority_impersonation",
     "urgency_pressure",
+    "isolation_attempt",
     "credential_request",
     "irregular_payment",
     "pretext_of_problem",
     "reward_baiting"
   ],
   "A3_hits_per_call": {
-    "scam_mean": 3.1,
-    "benign_mean": 0.35,
+    "scam_mean": 3.08,
+    "benign_mean": 0.34,
     "scam_dist": {
-      "1": 3,
-      "2": 33,
-      "3": 38,
-      "4": 35,
-      "5": 4,
+      "1": 7,
+      "2": 58,
+      "3": 63,
+      "4": 59,
+      "5": 11,
       "6": 1,
       "7": 1
     },
     "benign_dist": {
-      "0": 100,
-      "1": 9,
-      "2": 3,
-      "3": 2,
-      "4": 4,
-      "5": 1
+      "0": 168,
+      "1": 16,
+      "2": 5,
+      "3": 4,
+      "4": 5,
+      "5": 2
     }
   },
   "comparison_to_patent_features": "原專利表一九項中，lack_of_denial 與 spontaneous_correction 在 23 筆語料上present 次數皆為 0，使 global/p3/p8/p9 四個模式結構性不可觸發（docs/eval/pattern_reachability.md）。本報表的 A1_never_present_in_scam 即對應指標：清單為空代表替代特徵集不存在同型的死角。",
