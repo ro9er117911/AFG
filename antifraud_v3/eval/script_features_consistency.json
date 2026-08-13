@@ -1,0 +1,100 @@
+{
+  "provenance": {
+    "utc_time": "2026-08-13T06:02:34.818700+00:00",
+    "git_commit": "c074fc8a1121a4c1ddfb5c83f56b0f35bfd1977a",
+    "git_worktree_clean": false,
+    "llm_provider": "claude_code",
+    "llm_model_alias": "claude-opus-5",
+    "llm_effort": "medium",
+    "line2_backend": "claude",
+    "asr_backend": "whisper",
+    "emotion_backend": "wavlm",
+    "claude_cli_version": "2.1.228 (Claude Code)",
+    "python": "3.11.10",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
+  },
+  "how_this_arose": "非刻意設計的重測——兩個 process 同時 append 造成同一 clip 被獨立判斷兩次。資料既然產生了就據實記錄，但**不得**當作預先登錄的信度實驗：重複的 clip 不是隨機抽樣，而是兩個 process 執行區間恰好重疊的那一段。",
+  "n_clips_judged_twice": 189,
+  "n_feature_judgements_compared": 1512,
+  "n_agree": 1501,
+  "n_disagree": 11,
+  "agreement_rate": 0.9927,
+  "flips_by_feature": {
+    "authority_impersonation": 4,
+    "isolation_attempt": 2,
+    "reward_baiting": 2,
+    "urgency_pressure": 1,
+    "irregular_payment": 1,
+    "remote_control_request": 1
+  },
+  "disagreeing_clips": [
+    {
+      "clip": "46",
+      "features": [
+        "isolation_attempt"
+      ]
+    },
+    {
+      "clip": "78",
+      "features": [
+        "urgency_pressure"
+      ]
+    },
+    {
+      "clip": "101",
+      "features": [
+        "reward_baiting"
+      ]
+    },
+    {
+      "clip": "123",
+      "features": [
+        "remote_control_request"
+      ]
+    },
+    {
+      "clip": "149",
+      "features": [
+        "authority_impersonation"
+      ]
+    },
+    {
+      "clip": "161",
+      "features": [
+        "irregular_payment"
+      ]
+    },
+    {
+      "clip": "169",
+      "features": [
+        "authority_impersonation"
+      ]
+    },
+    {
+      "clip": "180",
+      "features": [
+        "authority_impersonation"
+      ]
+    },
+    {
+      "clip": "227",
+      "features": [
+        "reward_baiting"
+      ]
+    },
+    {
+      "clip": "230",
+      "features": [
+        "isolation_attempt"
+      ]
+    },
+    {
+      "clip": "236",
+      "features": [
+        "authority_impersonation"
+      ]
+    }
+  ],
+  "interpretation": "同一段逐字稿、同一模型、同一 prompt，兩次呼叫的特徵判斷一致率。不一致的部分即 provider 無 temperature/seed 控制所致的抖動下限（PROTOCOL_v2.md §2.2）。這是**下限**不是完整估計：只測了兩次，且僅涵蓋重疊區間的 clip。"
+}
