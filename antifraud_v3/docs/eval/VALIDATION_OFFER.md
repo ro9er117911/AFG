@@ -178,7 +178,8 @@ EER 從 **0.13% 到 31.96%**，差距 246 倍。
 | DePaulo et al. (2003), *Psychological Bulletin* | 116 篇統合分析，平均效果量 d≈0.25（小效果） |
 | National Research Council (2003) | 語音壓力分析「幾乎沒有科學根據」 |
 | Damphousse et al. (2007), NIJ 資助 | 實地驗證準確率約等同擲硬幣 |
-| Interspeech 2016 ComParE | 官方 baseline UAR 45.1%，低於隨機猜測 |
+| Interspeech 2016 ComParE Deception | 官方 baseline UAR 68.3%（隨機 50%）——**同域**成績 |
+| SVC 2025 Multimodal Deception Challenge | **跨域**多模態冠軍 62.44%，即每三次判斷錯一次以上 |
 
 貴方若曾接觸過「聲音測謊」類產品，應該知道這個領域的歷史：
 Nemesysco 自報 98%、獨立實測約 50%；英國 DWP 採用該技術的試辦計畫

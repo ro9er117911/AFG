@@ -41,7 +41,7 @@ ID R&D、Daon、Veridas 的核心專利本次僅查得「擁有專利」的敘�
 
 | 領域 | 代表文獻 | 狀態 |
 |---|---|---|
-| 語音欺騙偵測 | DePaulo et al. (2003) DOI 10.1037/0033-2909.129.1.74；NRC (2003)；ComParE 2016 DOI 10.21437/interspeech.2016-129 | **已被證否**，效果量 d≈0.25，baseline UAR 45.1% 低於隨機 |
+| 語音欺騙偵測 | DePaulo et al. (2003) DOI 10.1037/0033-2909.129.1.74；NRC (2003)；ComParE 2016 DOI 10.21437/interspeech.2016-129；SVC 2025 arXiv:2508.04129 | **長期低效，未達可部署水準**：效果量 d≈0.25；ComParE 2016 同域 baseline UAR 68.3%（隨機 50%）；SVC 2025 跨域多模態冠軍 62.44%。**註**：先前記載的「45.1% 低於隨機」為誤植（那是 Native Language 子挑戰的值），已更正 |
 | Anti-spoofing benchmark | ASVspoof 2015/2017/2019/2021/5；ADD 2022/2023 | 極度成熟，方法論已標準化 |
 | SSL 前端 + 分類頭 | AASIST (arXiv:2110.01200)；XLS-R+SLS (ACM MM 2024, DOI 10.1145/3664647.3681345) | SOTA 主流，非新穎 |
 | 音訊+文字雙模態詐騙偵測 | TeleAntiFraud-28k (ACM MM 2025, arXiv:2503.24115)；SAFE-QAQ (arXiv:2601.01392) | **與我方架構最接近的 prior art，必須正面處理** |

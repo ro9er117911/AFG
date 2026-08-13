@@ -176,14 +176,47 @@ fuse(fake_score: float, line2: AntiFraudQwenResult | None, threshold: float)
 我們把這段更正留在論文裡而非默默改掉，因為它本身就是可稽核性主張的測試案例——
 **一個宣稱「任何人都能查證」的文件，被查證時發現錯誤，該做的是公開更正。**
 
-四條互相獨立的證據支持這個決定：
+五條互相獨立的證據支持這個決定：
+
+### 更正：ComParE 2016 的數字先前引用錯誤
+
+本文先前記載「ComParE 2016 Deception 官方 baseline UAR 45.1%，**低於隨機猜測**」。
+**該數字是錯的，此處更正。**
+
+經查原始論文 PDF（ISCA archive，DOI 10.21437/interspeech.2016-129）§4.1 與 §4.3：
+
+| 子挑戰 | development | test baseline | 隨機水準 |
+|---|---|---|---|
+| **Deception** | 61.1% | **68.3%** | 50% |
+| Native Language | **45.1%** | 47.5% | 9.1% |
+
+45.1% 是 **Native Language 子挑戰**（11 類母語辨識）的 development 值，
+被誤植為 Deception 的 baseline。Deception 的真實 baseline **高於隨機，不是低於**。
+
+**這個更正削弱了原本的論據強度，但不推翻結論**——理由見下方表格後的說明。
+留下更正而非默默改掉，理由同 §3.1。
 
 | 證據 | 結論 |
 |---|---|
 | DePaulo et al. (2003), *Psychological Bulletin* 129(1), DOI 10.1037/0033-2909.129.1.74 | 116 篇統合分析，158 個線索僅 14 個顯著，平均效果量 d≈0.25 |
 | National Research Council (2003) | 語音壓力分析「幾乎沒有科學根據」 |
 | Damphousse et al. (2007), NIJ 資助, DOI 10.3886/ICPSR20625.v1 | CVSA 與 LVA 實地驗證準確率約等同擲硬幣 |
-| Interspeech 2016 ComParE Deception, DOI 10.21437/interspeech.2016-129 | 官方 baseline UAR 45.1%，**低於隨機猜測** |
+| Interspeech 2016 ComParE Deception, DOI 10.21437/interspeech.2016-129 | 官方 baseline UAR **68.3%**（隨機 50%，development 61.1%）——**同域**成績 |
+| SVC 2025 Multimodal Deception Challenge, arXiv:2508.04129 | **跨域**多模態（audio+video+text）冠軍 **62.44%**，21 隊參賽。**未報告純聲學數字** |
+
+**更正後這些數字支持什麼**：不是「聲學測謊做不到」，而是
+**「投入十年、動用三種模態之後，跨域最好的系統每三次判斷仍錯一次以上」**。
+
+2016 年同域 baseline 68.3%，2025 年跨域多模態冠軍 62.44%——跨域比同域低，
+與本文 §2.2 引用的 Speech DF Arena 跨域衰減現象方向一致。
+而本系統可容忍的誤報上限是 1～1.6%（§5.5 Q6）。差距是數量級，不是調校。
+
+因此本系統不做聲學測謊，改做話術內容辨識——「這通電話在講什麼」有明確答案、
+可標註、可驗證；「這個人有沒有說謊」連 ground truth 的定義都有爭議。
+
+**須誠實標註的限制**：SVC 2025 為 audio+video+text 多模態，
+**論文未報告任何純聲學（audio-only）的分模態數字**，
+故「純聲學今天能到多少」本文**無法回答**，亦不猜測。
 
 各特徵證據強度差異極大，不可等權處理：
 

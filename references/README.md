@@ -48,7 +48,8 @@
 DePaulo et al. (2003) DOI 10.1037/0033-2909.129.1.74（欺騙線索統合分析，d≈0.25）、
 NRC (2003)《The Polygraph and Lie Detection》、
 Damphousse et al. (2007) DOI 10.3886/ICPSR20625.v1（VSA 實地驗證約等同擲硬幣）、
-Interspeech 2016 ComParE Deception DOI 10.21437/interspeech.2016-129（baseline UAR 45.1%）、
+Interspeech 2016 ComParE Deception DOI 10.21437/interspeech.2016-129（Deception baseline UAR **68.3%**，隨機 50%；先前誤植的 45.1% 屬 Native Language 子挑戰）、
+SVC 2025 Multimodal Deception Challenge arXiv:2508.04129（跨域多模態冠軍 62.44%，未報告純聲學數字）、
 Schewski et al. (2025) PLOS One DOI 10.1371/journal.pone.0328833（jitter/shimmer/HNR 無一致方向）、
 arXiv:2606.21584（EER 掩蓋部署失敗：78.7% 真人語音被誤殺）、
 arXiv:2507.16291（LLM 改寫話術使分類器準確率降 30.96%）。

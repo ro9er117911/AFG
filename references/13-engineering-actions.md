@@ -147,9 +147,12 @@ Line 2 若偏向關鍵詞或固定句式比對，半年內會被追上。
 `reasoning/fusion.py` 目前**不讓聲學特徵進入判決**——只有 Line 1 的
 `fake_score` 與 Line 2 的 `AntiFraudQwenResult` 決定 `is_fraud` / `risk_level`。
 
-**這是對的，不要改。** 四條獨立證據否定聲學測謊
+**這是對的，不要改。** 獨立證據顯示聲學測謊長期低效、從未達可部署水準
 （DePaulo 2003 d≈0.25；NRC 2003；Damphousse 2007 約等同擲硬幣；
-ComParE 2016 baseline UAR 45.1% 低於隨機）。
+ComParE 2016 Deception 同域 baseline UAR **68.3%**，隨機 50%；
+SVC 2025 跨域多模態冠軍 **62.44%**，arXiv:2508.04129）。
+**註**：先前此處記載「ComParE 2016 baseline 45.1% 低於隨機」為誤植——
+45.1% 是同篇論文 Native Language 子挑戰的值，已更正。
 
 各特徵證據強度（**不可等權**）：
 - **F0**：SMD=0.55，但校正發表偏誤後 0.17 **不顯著**
