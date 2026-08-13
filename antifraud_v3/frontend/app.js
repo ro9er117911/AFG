@@ -1476,7 +1476,12 @@ function categoryLabel(category) {
   return CATEGORY_LABELS_ZH[category] || category;
 }
 
-// Each category renders as a collapsed <details> section (only the first starts open) — with
+// scam opens by default: it's the category you actually want to eyeball, and it does not sort
+// first alphabetically. Falls back to the first category when there is no scam folder, so an
+// unknown future set of categories still opens something rather than rendering all-collapsed.
+const DEFAULT_OPEN_CATEGORY = 'scam';
+
+// Each category renders as a collapsed <details> section (only one starts open) — with
 // more than two categories the old flat "one long list" layout would make the page unusably
 // long, so the page grows downward as closed summaries instead.
 async function loadTestData() {
@@ -1493,11 +1498,14 @@ async function loadTestData() {
     container.innerHTML = '<div class="placeholder-note">尚未找到任何測試音檔（eval/test_clips/ 底下沒有分類資料夾）。</div>';
     return;
   }
+  const openCategory = categories.includes(DEFAULT_OPEN_CATEGORY)
+    ? DEFAULT_OPEN_CATEGORY
+    : categories[0];
   container.innerHTML = categories
-    .map((category, i) => {
+    .map((category) => {
       const files = clips[category].slice(0, TEST_CLIP_COUNT);
       return `
-      <details class="test-category"${i === 0 ? ' open' : ''}>
+      <details class="test-category"${category === openCategory ? ' open' : ''}>
         <summary class="test-category-summary"><span>${categoryLabel(category)}</span><span class="test-category-count">${files.length}</span></summary>
         <div class="test-category-body">${files.map((f) => testClipCardHTML(category, f)).join('')}</div>
       </details>`;
