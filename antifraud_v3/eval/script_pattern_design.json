@@ -1,0 +1,1377 @@
+{
+  "provenance": {
+    "utc_time": "2026-08-14T01:18:06.078423+00:00",
+    "git_commit": "a13d03e19a75e1b04520f0e539077290aa979180",
+    "git_worktree_clean": false,
+    "llm_provider": "claude_code",
+    "llm_model_alias": "claude-opus-5",
+    "llm_effort": "medium",
+    "line2_backend": "claude",
+    "asr_backend": "whisper",
+    "emotion_backend": "wavlm",
+    "claude_cli_version": "2.1.228 (Claude Code)",
+    "python": "3.11.10",
+    "platform": "macOS-26.6.1-arm64-arm-64bit",
+    "reproducibility_caveat": "模型別名（如 claude-opus-5）會隨時間指向不同的實際模型版本，且 ClaudeCodeProvider 未提供 temperature/seed 控制。因此本結果『可歸因』但**不可精確重現**——第三方重跑會得到不同數字。見 PROTOCOL.md §10 與 REVIEW_LOG.md 第 9 項。"
+  },
+  "purpose": "為『用 Q6b 八項特徵取代專利九項』提供設計依據：哪些 AND 組合在實測資料上根本觸發不了。**這是排除性分析，不是選型結論。**",
+  "not_a_conclusion": "本檔不挑出『最佳組合』。在唯一一份語料上窮舉再挑最高 lift，挑出的組合會過擬合這 400 筆——即 PROTOCOL.md §6 禁止的調參到過關。要宣稱任何組合有效，須在獨立語料上驗證。",
+  "corpus": "TeleAntiFraud test，scam 200 / benign 200",
+  "min_useful_rate": 0.05,
+  "dead_combination_rate_by_size": {
+    "1": {
+      "n_combinations": 8,
+      "n_dead": 1,
+      "dead_rate": 0.125
+    },
+    "2": {
+      "n_combinations": 28,
+      "n_dead": 14,
+      "dead_rate": 0.5
+    },
+    "3": {
+      "n_combinations": 56,
+      "n_dead": 46,
+      "dead_rate": 0.821
+    }
+  },
+  "key_finding": "AND 組合的項數每增加一項，死組合的比例就上升——這正是專利十模式（每個模式要求 1-2 個情緒 AND 1-3 個語意特徵，共 2-5 項全中）有九個觸發不了的結構性原因。",
+  "all_combinations": [
+    {
+      "size": 1,
+      "features": [
+        "authority_impersonation"
+      ],
+      "zh": "冒充權威身份",
+      "scam_n": 169,
+      "scam_rate": 0.845,
+      "benign_n": 18,
+      "benign_rate": 0.09,
+      "lift": 9.39,
+      "dead": false
+    },
+    {
+      "size": 1,
+      "features": [
+        "pretext_of_problem"
+      ],
+      "zh": "虛構待解決問題",
+      "scam_n": 145,
+      "scam_rate": 0.725,
+      "benign_n": 4,
+      "benign_rate": 0.02,
+      "lift": 36.25,
+      "dead": false
+    },
+    {
+      "size": 1,
+      "features": [
+        "urgency_pressure"
+      ],
+      "zh": "製造時間壓力",
+      "scam_n": 107,
+      "scam_rate": 0.535,
+      "benign_n": 11,
+      "benign_rate": 0.055,
+      "lift": 9.73,
+      "dead": false
+    },
+    {
+      "size": 1,
+      "features": [
+        "credential_request"
+      ],
+      "zh": "索取憑證",
+      "scam_n": 85,
+      "scam_rate": 0.425,
+      "benign_n": 2,
+      "benign_rate": 0.01,
+      "lift": 42.5,
+      "dead": false
+    },
+    {
+      "size": 1,
+      "features": [
+        "reward_baiting"
+      ],
+      "zh": "利益誘餌",
+      "scam_n": 56,
+      "scam_rate": 0.28,
+      "benign_n": 25,
+      "benign_rate": 0.125,
+      "lift": 2.24,
+      "dead": false
+    },
+    {
+      "size": 1,
+      "features": [
+        "irregular_payment"
+      ],
+      "zh": "要求非常規金流",
+      "scam_n": 38,
+      "scam_rate": 0.19,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 38.0,
+      "dead": false
+    },
+    {
+      "size": 1,
+      "features": [
+        "isolation_attempt"
+      ],
+      "zh": "阻止求證",
+      "scam_n": 13,
+      "scam_rate": 0.065,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 1,
+      "features": [
+        "remote_control_request"
+      ],
+      "zh": "要求遠端操作",
+      "scam_n": 3,
+      "scam_rate": 0.015,
+      "benign_n": 7,
+      "benign_rate": 0.035,
+      "lift": 0.43,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "authority_impersonation",
+        "pretext_of_problem"
+      ],
+      "zh": "冒充權威身份 + 虛構待解決問題",
+      "scam_n": 123,
+      "scam_rate": 0.615,
+      "benign_n": 4,
+      "benign_rate": 0.02,
+      "lift": 30.75,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "urgency_pressure",
+        "pretext_of_problem"
+      ],
+      "zh": "製造時間壓力 + 虛構待解決問題",
+      "scam_n": 84,
+      "scam_rate": 0.42,
+      "benign_n": 2,
+      "benign_rate": 0.01,
+      "lift": 42.0,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "authority_impersonation",
+        "urgency_pressure"
+      ],
+      "zh": "冒充權威身份 + 製造時間壓力",
+      "scam_n": 83,
+      "scam_rate": 0.415,
+      "benign_n": 11,
+      "benign_rate": 0.055,
+      "lift": 7.55,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "authority_impersonation",
+        "credential_request"
+      ],
+      "zh": "冒充權威身份 + 索取憑證",
+      "scam_n": 82,
+      "scam_rate": 0.41,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "credential_request",
+        "pretext_of_problem"
+      ],
+      "zh": "索取憑證 + 虛構待解決問題",
+      "scam_n": 69,
+      "scam_rate": 0.345,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "urgency_pressure",
+        "credential_request"
+      ],
+      "zh": "製造時間壓力 + 索取憑證",
+      "scam_n": 53,
+      "scam_rate": 0.265,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "authority_impersonation",
+        "reward_baiting"
+      ],
+      "zh": "冒充權威身份 + 利益誘餌",
+      "scam_n": 48,
+      "scam_rate": 0.24,
+      "benign_n": 12,
+      "benign_rate": 0.06,
+      "lift": 4.0,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "urgency_pressure",
+        "irregular_payment"
+      ],
+      "zh": "製造時間壓力 + 要求非常規金流",
+      "scam_n": 32,
+      "scam_rate": 0.16,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 32.0,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "irregular_payment",
+        "pretext_of_problem"
+      ],
+      "zh": "要求非常規金流 + 虛構待解決問題",
+      "scam_n": 32,
+      "scam_rate": 0.16,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 32.0,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "urgency_pressure",
+        "reward_baiting"
+      ],
+      "zh": "製造時間壓力 + 利益誘餌",
+      "scam_n": 24,
+      "scam_rate": 0.12,
+      "benign_n": 10,
+      "benign_rate": 0.05,
+      "lift": 2.4,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "authority_impersonation",
+        "irregular_payment"
+      ],
+      "zh": "冒充權威身份 + 要求非常規金流",
+      "scam_n": 23,
+      "scam_rate": 0.115,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 23.0,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "credential_request",
+        "reward_baiting"
+      ],
+      "zh": "索取憑證 + 利益誘餌",
+      "scam_n": 18,
+      "scam_rate": 0.09,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 18.0,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "authority_impersonation",
+        "isolation_attempt"
+      ],
+      "zh": "冒充權威身份 + 阻止求證",
+      "scam_n": 10,
+      "scam_rate": 0.05,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "urgency_pressure",
+        "isolation_attempt"
+      ],
+      "zh": "製造時間壓力 + 阻止求證",
+      "scam_n": 10,
+      "scam_rate": 0.05,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 2,
+      "features": [
+        "credential_request",
+        "irregular_payment"
+      ],
+      "zh": "索取憑證 + 要求非常規金流",
+      "scam_n": 9,
+      "scam_rate": 0.045,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "isolation_attempt",
+        "pretext_of_problem"
+      ],
+      "zh": "阻止求證 + 虛構待解決問題",
+      "scam_n": 8,
+      "scam_rate": 0.04,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "irregular_payment",
+        "reward_baiting"
+      ],
+      "zh": "要求非常規金流 + 利益誘餌",
+      "scam_n": 8,
+      "scam_rate": 0.04,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "isolation_attempt",
+        "credential_request"
+      ],
+      "zh": "阻止求證 + 索取憑證",
+      "scam_n": 7,
+      "scam_rate": 0.035,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "isolation_attempt",
+        "reward_baiting"
+      ],
+      "zh": "阻止求證 + 利益誘餌",
+      "scam_n": 6,
+      "scam_rate": 0.03,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "isolation_attempt",
+        "irregular_payment"
+      ],
+      "zh": "阻止求證 + 要求非常規金流",
+      "scam_n": 4,
+      "scam_rate": 0.02,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "authority_impersonation",
+        "remote_control_request"
+      ],
+      "zh": "冒充權威身份 + 要求遠端操作",
+      "scam_n": 3,
+      "scam_rate": 0.015,
+      "benign_n": 7,
+      "benign_rate": 0.035,
+      "lift": 0.43,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "remote_control_request",
+        "reward_baiting"
+      ],
+      "zh": "要求遠端操作 + 利益誘餌",
+      "scam_n": 3,
+      "scam_rate": 0.015,
+      "benign_n": 6,
+      "benign_rate": 0.03,
+      "lift": 0.5,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "pretext_of_problem",
+        "reward_baiting"
+      ],
+      "zh": "虛構待解決問題 + 利益誘餌",
+      "scam_n": 3,
+      "scam_rate": 0.015,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 3.0,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "urgency_pressure",
+        "remote_control_request"
+      ],
+      "zh": "製造時間壓力 + 要求遠端操作",
+      "scam_n": 2,
+      "scam_rate": 0.01,
+      "benign_n": 7,
+      "benign_rate": 0.035,
+      "lift": 0.29,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "credential_request",
+        "remote_control_request"
+      ],
+      "zh": "索取憑證 + 要求遠端操作",
+      "scam_n": 2,
+      "scam_rate": 0.01,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "irregular_payment",
+        "remote_control_request"
+      ],
+      "zh": "要求非常規金流 + 要求遠端操作",
+      "scam_n": 1,
+      "scam_rate": 0.005,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 1.0,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "isolation_attempt",
+        "remote_control_request"
+      ],
+      "zh": "阻止求證 + 要求遠端操作",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 2,
+      "features": [
+        "remote_control_request",
+        "pretext_of_problem"
+      ],
+      "zh": "要求遠端操作 + 虛構待解決問題",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 2,
+      "benign_rate": 0.01,
+      "lift": 0.0,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "credential_request",
+        "pretext_of_problem"
+      ],
+      "zh": "冒充權威身份 + 索取憑證 + 虛構待解決問題",
+      "scam_n": 69,
+      "scam_rate": 0.345,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "urgency_pressure",
+        "pretext_of_problem"
+      ],
+      "zh": "冒充權威身份 + 製造時間壓力 + 虛構待解決問題",
+      "scam_n": 63,
+      "scam_rate": 0.315,
+      "benign_n": 2,
+      "benign_rate": 0.01,
+      "lift": 31.5,
+      "dead": false
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "urgency_pressure",
+        "credential_request"
+      ],
+      "zh": "冒充權威身份 + 製造時間壓力 + 索取憑證",
+      "scam_n": 52,
+      "scam_rate": 0.26,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "credential_request",
+        "pretext_of_problem"
+      ],
+      "zh": "製造時間壓力 + 索取憑證 + 虛構待解決問題",
+      "scam_n": 43,
+      "scam_rate": 0.215,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "irregular_payment",
+        "pretext_of_problem"
+      ],
+      "zh": "製造時間壓力 + 要求非常規金流 + 虛構待解決問題",
+      "scam_n": 26,
+      "scam_rate": 0.13,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 26.0,
+      "dead": false
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "urgency_pressure",
+        "reward_baiting"
+      ],
+      "zh": "冒充權威身份 + 製造時間壓力 + 利益誘餌",
+      "scam_n": 22,
+      "scam_rate": 0.11,
+      "benign_n": 10,
+      "benign_rate": 0.05,
+      "lift": 2.2,
+      "dead": false
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "urgency_pressure",
+        "irregular_payment"
+      ],
+      "zh": "冒充權威身份 + 製造時間壓力 + 要求非常規金流",
+      "scam_n": 17,
+      "scam_rate": 0.085,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 17.0,
+      "dead": false
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "irregular_payment",
+        "pretext_of_problem"
+      ],
+      "zh": "冒充權威身份 + 要求非常規金流 + 虛構待解決問題",
+      "scam_n": 17,
+      "scam_rate": 0.085,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 17.0,
+      "dead": false
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "credential_request",
+        "reward_baiting"
+      ],
+      "zh": "冒充權威身份 + 索取憑證 + 利益誘餌",
+      "scam_n": 15,
+      "scam_rate": 0.075,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "credential_request",
+        "reward_baiting"
+      ],
+      "zh": "製造時間壓力 + 索取憑證 + 利益誘餌",
+      "scam_n": 11,
+      "scam_rate": 0.055,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": false
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "credential_request",
+        "irregular_payment"
+      ],
+      "zh": "冒充權威身份 + 索取憑證 + 要求非常規金流",
+      "scam_n": 9,
+      "scam_rate": 0.045,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "irregular_payment",
+        "reward_baiting"
+      ],
+      "zh": "冒充權威身份 + 要求非常規金流 + 利益誘餌",
+      "scam_n": 8,
+      "scam_rate": 0.04,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "irregular_payment",
+        "reward_baiting"
+      ],
+      "zh": "製造時間壓力 + 要求非常規金流 + 利益誘餌",
+      "scam_n": 8,
+      "scam_rate": 0.04,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "urgency_pressure",
+        "isolation_attempt"
+      ],
+      "zh": "冒充權威身份 + 製造時間壓力 + 阻止求證",
+      "scam_n": 7,
+      "scam_rate": 0.035,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "isolation_attempt",
+        "credential_request"
+      ],
+      "zh": "冒充權威身份 + 阻止求證 + 索取憑證",
+      "scam_n": 7,
+      "scam_rate": 0.035,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "isolation_attempt",
+        "pretext_of_problem"
+      ],
+      "zh": "製造時間壓力 + 阻止求證 + 虛構待解決問題",
+      "scam_n": 7,
+      "scam_rate": 0.035,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "credential_request",
+        "irregular_payment",
+        "pretext_of_problem"
+      ],
+      "zh": "索取憑證 + 要求非常規金流 + 虛構待解決問題",
+      "scam_n": 7,
+      "scam_rate": 0.035,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "isolation_attempt",
+        "pretext_of_problem"
+      ],
+      "zh": "冒充權威身份 + 阻止求證 + 虛構待解決問題",
+      "scam_n": 6,
+      "scam_rate": 0.03,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "isolation_attempt",
+        "credential_request"
+      ],
+      "zh": "製造時間壓力 + 阻止求證 + 索取憑證",
+      "scam_n": 6,
+      "scam_rate": 0.03,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "credential_request",
+        "irregular_payment"
+      ],
+      "zh": "製造時間壓力 + 索取憑證 + 要求非常規金流",
+      "scam_n": 6,
+      "scam_rate": 0.03,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "isolation_attempt",
+        "reward_baiting"
+      ],
+      "zh": "冒充權威身份 + 阻止求證 + 利益誘餌",
+      "scam_n": 5,
+      "scam_rate": 0.025,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "isolation_attempt",
+        "credential_request",
+        "pretext_of_problem"
+      ],
+      "zh": "阻止求證 + 索取憑證 + 虛構待解決問題",
+      "scam_n": 5,
+      "scam_rate": 0.025,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "isolation_attempt",
+        "irregular_payment"
+      ],
+      "zh": "製造時間壓力 + 阻止求證 + 要求非常規金流",
+      "scam_n": 4,
+      "scam_rate": 0.02,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "isolation_attempt",
+        "reward_baiting"
+      ],
+      "zh": "製造時間壓力 + 阻止求證 + 利益誘餌",
+      "scam_n": 4,
+      "scam_rate": 0.02,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "isolation_attempt",
+        "irregular_payment",
+        "pretext_of_problem"
+      ],
+      "zh": "阻止求證 + 要求非常規金流 + 虛構待解決問題",
+      "scam_n": 4,
+      "scam_rate": 0.02,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "remote_control_request",
+        "reward_baiting"
+      ],
+      "zh": "冒充權威身份 + 要求遠端操作 + 利益誘餌",
+      "scam_n": 3,
+      "scam_rate": 0.015,
+      "benign_n": 6,
+      "benign_rate": 0.03,
+      "lift": 0.5,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "pretext_of_problem",
+        "reward_baiting"
+      ],
+      "zh": "冒充權威身份 + 虛構待解決問題 + 利益誘餌",
+      "scam_n": 3,
+      "scam_rate": 0.015,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 3.0,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "isolation_attempt",
+        "credential_request",
+        "reward_baiting"
+      ],
+      "zh": "阻止求證 + 索取憑證 + 利益誘餌",
+      "scam_n": 3,
+      "scam_rate": 0.015,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "credential_request",
+        "irregular_payment",
+        "reward_baiting"
+      ],
+      "zh": "索取憑證 + 要求非常規金流 + 利益誘餌",
+      "scam_n": 3,
+      "scam_rate": 0.015,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "urgency_pressure",
+        "remote_control_request"
+      ],
+      "zh": "冒充權威身份 + 製造時間壓力 + 要求遠端操作",
+      "scam_n": 2,
+      "scam_rate": 0.01,
+      "benign_n": 7,
+      "benign_rate": 0.035,
+      "lift": 0.29,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "isolation_attempt",
+        "irregular_payment"
+      ],
+      "zh": "冒充權威身份 + 阻止求證 + 要求非常規金流",
+      "scam_n": 2,
+      "scam_rate": 0.01,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "credential_request",
+        "remote_control_request"
+      ],
+      "zh": "冒充權威身份 + 索取憑證 + 要求遠端操作",
+      "scam_n": 2,
+      "scam_rate": 0.01,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "remote_control_request",
+        "reward_baiting"
+      ],
+      "zh": "製造時間壓力 + 要求遠端操作 + 利益誘餌",
+      "scam_n": 2,
+      "scam_rate": 0.01,
+      "benign_n": 6,
+      "benign_rate": 0.03,
+      "lift": 0.33,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "pretext_of_problem",
+        "reward_baiting"
+      ],
+      "zh": "製造時間壓力 + 虛構待解決問題 + 利益誘餌",
+      "scam_n": 2,
+      "scam_rate": 0.01,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 2.0,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "credential_request",
+        "remote_control_request",
+        "reward_baiting"
+      ],
+      "zh": "索取憑證 + 要求遠端操作 + 利益誘餌",
+      "scam_n": 2,
+      "scam_rate": 0.01,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "credential_request",
+        "pretext_of_problem",
+        "reward_baiting"
+      ],
+      "zh": "索取憑證 + 虛構待解決問題 + 利益誘餌",
+      "scam_n": 2,
+      "scam_rate": 0.01,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "irregular_payment",
+        "pretext_of_problem",
+        "reward_baiting"
+      ],
+      "zh": "要求非常規金流 + 虛構待解決問題 + 利益誘餌",
+      "scam_n": 2,
+      "scam_rate": 0.01,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "irregular_payment",
+        "remote_control_request"
+      ],
+      "zh": "冒充權威身份 + 要求非常規金流 + 要求遠端操作",
+      "scam_n": 1,
+      "scam_rate": 0.005,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 1.0,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "credential_request",
+        "remote_control_request"
+      ],
+      "zh": "製造時間壓力 + 索取憑證 + 要求遠端操作",
+      "scam_n": 1,
+      "scam_rate": 0.005,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "irregular_payment",
+        "remote_control_request"
+      ],
+      "zh": "製造時間壓力 + 要求非常規金流 + 要求遠端操作",
+      "scam_n": 1,
+      "scam_rate": 0.005,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 1.0,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "isolation_attempt",
+        "credential_request",
+        "irregular_payment"
+      ],
+      "zh": "阻止求證 + 索取憑證 + 要求非常規金流",
+      "scam_n": 1,
+      "scam_rate": 0.005,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "isolation_attempt",
+        "irregular_payment",
+        "reward_baiting"
+      ],
+      "zh": "阻止求證 + 要求非常規金流 + 利益誘餌",
+      "scam_n": 1,
+      "scam_rate": 0.005,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "isolation_attempt",
+        "pretext_of_problem",
+        "reward_baiting"
+      ],
+      "zh": "阻止求證 + 虛構待解決問題 + 利益誘餌",
+      "scam_n": 1,
+      "scam_rate": 0.005,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "credential_request",
+        "irregular_payment",
+        "remote_control_request"
+      ],
+      "zh": "索取憑證 + 要求非常規金流 + 要求遠端操作",
+      "scam_n": 1,
+      "scam_rate": 0.005,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "irregular_payment",
+        "remote_control_request",
+        "reward_baiting"
+      ],
+      "zh": "要求非常規金流 + 要求遠端操作 + 利益誘餌",
+      "scam_n": 1,
+      "scam_rate": 0.005,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "isolation_attempt",
+        "remote_control_request"
+      ],
+      "zh": "冒充權威身份 + 阻止求證 + 要求遠端操作",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "authority_impersonation",
+        "remote_control_request",
+        "pretext_of_problem"
+      ],
+      "zh": "冒充權威身份 + 要求遠端操作 + 虛構待解決問題",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 2,
+      "benign_rate": 0.01,
+      "lift": 0.0,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "isolation_attempt",
+        "remote_control_request"
+      ],
+      "zh": "製造時間壓力 + 阻止求證 + 要求遠端操作",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "urgency_pressure",
+        "remote_control_request",
+        "pretext_of_problem"
+      ],
+      "zh": "製造時間壓力 + 要求遠端操作 + 虛構待解決問題",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 2,
+      "benign_rate": 0.01,
+      "lift": 0.0,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "isolation_attempt",
+        "credential_request",
+        "remote_control_request"
+      ],
+      "zh": "阻止求證 + 索取憑證 + 要求遠端操作",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "isolation_attempt",
+        "irregular_payment",
+        "remote_control_request"
+      ],
+      "zh": "阻止求證 + 要求非常規金流 + 要求遠端操作",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "isolation_attempt",
+        "remote_control_request",
+        "pretext_of_problem"
+      ],
+      "zh": "阻止求證 + 要求遠端操作 + 虛構待解決問題",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "isolation_attempt",
+        "remote_control_request",
+        "reward_baiting"
+      ],
+      "zh": "阻止求證 + 要求遠端操作 + 利益誘餌",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "credential_request",
+        "remote_control_request",
+        "pretext_of_problem"
+      ],
+      "zh": "索取憑證 + 要求遠端操作 + 虛構待解決問題",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 0,
+      "benign_rate": 0.0,
+      "lift": null,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "irregular_payment",
+        "remote_control_request",
+        "pretext_of_problem"
+      ],
+      "zh": "要求非常規金流 + 要求遠端操作 + 虛構待解決問題",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 0.0,
+      "dead": true
+    },
+    {
+      "size": 3,
+      "features": [
+        "remote_control_request",
+        "pretext_of_problem",
+        "reward_baiting"
+      ],
+      "zh": "要求遠端操作 + 虛構待解決問題 + 利益誘餌",
+      "scam_n": 0,
+      "scam_rate": 0.0,
+      "benign_n": 1,
+      "benign_rate": 0.005,
+      "lift": 0.0,
+      "dead": true
+    }
+  ]
+}
